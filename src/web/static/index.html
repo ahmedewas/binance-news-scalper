@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Binance Scalper | لوحة تحكم الهاتف</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #38bdf8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --border: #334155;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 12px; padding-bottom: 30px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .title { font-size: 1.15rem; font-weight: bold; color: var(--accent); }
+        .badge { padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
+        .badge-paper { background: #065f46; color: #34d399; }
+        .badge-live { background: #7f1d1d; color: #f87171; }
+        .badge-active { background: #1e3a8a; color: #60a5fa; }
+        .badge-paused { background: #374151; color: #9ca3af; }
+
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+        .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+        .card-full { grid-column: span 2; }
+        .card-title { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 6px; }
+        .card-val { font-size: 1.3rem; font-weight: bold; }
+
+        .btn-group { display: flex; gap: 8px; margin-bottom: 16px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.85rem; }
+        .btn-toggle { background: #2563eb; color: white; }
+        .btn-danger { background: #dc2626; color: white; }
+
+        .section-title { font-size: 0.95rem; font-weight: bold; margin: 16px 0 8px 0; color: var(--accent); }
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); background: var(--card-bg); margin-bottom: 6px; border-radius: 6px; }
+        .badge-score { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .pnl-pos { color: var(--success); font-weight: bold; }
+        .pnl-neg { color: var(--danger); font-weight: bold; }
+        .empty-text { color: var(--text-dim); font-size: 0.85rem; text-align: center; padding: 16px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">⚡ Binance News Scalper</div>
+        <div>
+            <span id="mode-badge" class="badge badge-paper">PAPER</span>
+            <span id="status-badge" class="badge badge-active">ACTIVE</span>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="card-title">الرصيد المتاح (USDT)</div>
+            <div id="balance" class="card-val" style="color: #38bdf8;">$0.00</div>
+        </div>
+        <div class="card">
+            <div class="card-title">حجم الصفقة (Slot Size)</div>
+            <div id="slot-size" class="card-val" style="color: #34d399;">$0.00</div>
+        </div>
+        <div class="card card-full">
+            <div class="card-title">الخانات المتاحة للدورة السريعة</div>
+            <div id="slots-info" style="font-size: 1rem; font-weight: bold;">--</div>
+        </div>
+    </div>
+
+    <div class="btn-group">
+        <button id="toggle-btn" class="btn-toggle" onclick="toggleBot()">إيقاف / تشغيل البوت</button>
+        <button class="btn-danger" onclick="emergencyClose()">🚨 خروج طوارئ</button>
+    </div>
+
+    <div class="section-title">📊 الصفقات المفتوحة حالياً (Active Positions)</div>
+    <div id="positions-container">
+        <div class="empty-text">لا توجد صفقات مفتوحة حالياً</div>
+    </div>
+
+    <div class="section-title">📡 رادار الأخبار وتحليل الزخم اللحظي</div>
+    <div id="news-container">
+        <div class="empty-text">جاري فحص الخلاصات الإخبارية...</div>
+    </div>
+
+    <div class="section-title">📜 سجل الصفقات المغلقة مؤخراً</div>
+    <div id="history-container">
+        <div class="empty-text">لا توجد صفقات مغلقة بعد</div>
+    </div>
+
+    <script>
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                
+                document.getElementById('balance').innerText = `$${data.usdt_balance.toFixed(2)}`;
+                document.getElementById('slot-size').innerText = `$${data.allocation.slot_size.toFixed(2)}`;
+                document.getElementById('slots-info').innerText = `عدد الخانات الكلي: ${data.allocation.total_slots} | صفقات نشطة: ${data.open_positions.length}`;
+                
+                const mb = document.getElementById('mode-badge');
+                mb.innerText = data.mode;
+                mb.className = data.mode === 'LIVE' ? 'badge badge-live' : 'badge badge-paper';
+
+                const sb = document.getElementById('status-badge');
+                sb.innerText = data.is_active ? 'ACTIVE' : 'PAUSED';
+                sb.className = data.is_active ? 'badge badge-active' : 'badge badge-paused';
+
+                renderPositions(data.open_positions);
+                renderNews(data.latest_news);
+                renderHistory(data.trade_history);
+            } catch (e) {
+                console.error("Fetch status failed", e);
+            }
+        }
+
+        function renderPositions(pos) {
+            const c = document.getElementById('positions-container');
+            if (!pos || pos.length === 0) {
+                c.innerHTML = '<div class="empty-text">لا توجد صفقات مفتوحة حالياً</div>';
+                return;
+            }
+            c.innerHTML = pos.map(p => `
+                <div class="item-row">
+                    <div>
+                        <strong>${p.symbol}</strong> (خانة ${p.slot_id})
+                        <div style="font-size:0.75rem; color:var(--text-dim);">دخول: $${p.entry_price} | حالي: $${p.current_price}</div>
+                    </div>
+                    <div class="${p.pnl_pct >= 0 ? 'pnl-pos' : 'pnl-neg'}">${p.pnl_pct >= 0 ? '+' : ''}${p.pnl_pct}%</div>
+                </div>
+            `).join('');
+        }
+
+        function renderNews(news) {
+            const c = document.getElementById('news-container');
+            if (!news || news.length === 0) {
+                c.innerHTML = '<div class="empty-text">بانتظار أخبار جديدة...</div>';
+                return;
+            }
+            c.innerHTML = news.slice().reverse().map(n => `
+                <div class="item-row">
+                    <div style="max-width: 75%;">
+                        <div style="font-weight:bold; color:var(--accent);">${n.symbol} [${n.phase}]</div>
+                        <div style="font-size:0.75rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${n.title}</div>
+                    </div>
+                    <div>
+                        <span class="badge-score" style="background:${n.approved ? '#065f46' : '#7f1d1d'}; color:white;">
+                            ${n.score}/100
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderHistory(hist) {
+            const c = document.getElementById('history-container');
+            if (!hist || hist.length === 0) {
+                c.innerHTML = '<div class="empty-text">لا توجد صفقات سابقة</div>';
+                return;
+            }
+            c.innerHTML = hist.slice().reverse().map(h => `
+                <div class="item-row">
+                    <div>
+                        <strong>${h.symbol}</strong>
+                        <div style="font-size:0.75rem; color:var(--text-dim);">${h.reason}</div>
+                    </div>
+                    <div class="${h.pnl_pct >= 0 ? 'pnl-pos' : 'pnl-neg'}">${h.pnl_pct >= 0 ? '+' : ''}${h.pnl_pct}%</div>
+                </div>
+            `).join('');
+        }
+
+        async function toggleBot() {
+            await fetch('/api/toggle', { method: 'POST' });
+            fetchStatus();
+        }
+
+        async function emergencyClose() {
+            if (confirm("هل أنت متأكد من رغبتك في إغلاق كافة الصفقات فوراً بسعر السوق؟")) {
+                await fetch('/api/close_all', { method: 'POST' });
+                fetchStatus();
+            }
+        }
+
+        setInterval(fetchStatus, 3000);
+        fetchStatus();
+    </script>
+</body>
+</html>
