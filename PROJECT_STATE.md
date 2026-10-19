@@ -54,11 +54,13 @@
 - [x] **Live Market Quant Radar (`src/engine/market_scanner.py`):** Continuous scanning of top liquid pairs (BTC, ETH, SOL, BNB, NEAR, FET) showing live prices, Wyckoff regimes, and composite scores.
 - [x] **Rich Position & Exit Detail UI (`src/web/`):** Full transparency showing entry/current prices, capital invested, dollar/percent PnL, target prices, timeout countdowns, and detailed Arabic exit reasons.
 
+- [x] **Audit Journal & Live Proof Verification (`src/core/audit_journal.py`):** Real-time persistent markdown journal (`TRADING_JOURNAL.md`) documenting every trade open/close with real Binance verification links, entry reasons, and daily PnL tracking.
+
 ## 3. Active Sprint Status
-- **Status:** Enhanced Transparency, Hourly Tracker & Live Market Radar Deployed.
-- **Verification:** 55/55 unit tests passed (0.52s). All files strictly <= 100 lines.
+- **Status:** Full Forensic Journal & Daily PnL Auditing Live.
+- **Verification:** 56/56 unit tests passed (0.58s). All files strictly <= 100 lines.
 - **Launchers Created:**
   - `C:\Users\alpraa\.gemini\antigravity\scratch\binance_news_scalper\run.bat`
   - `C:\Users\alpraa\Desktop\تشغيل_بوت_بينانس.bat` (Desktop shortcut)
-- **Active Task:** User running 8-hour live market simulation on PAPER mode (15$ initial capital, 3 slots) with hourly review capability.
+- **Active Task:** User running 8-hour live market simulation on PAPER mode (15$ initial capital, 3 slots) with real-time audit journal and hourly review.
 
