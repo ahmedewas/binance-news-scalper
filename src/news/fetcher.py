@@ -2,7 +2,7 @@
 import logging
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Any
 import requests
 from src.core.models import NewsItem
 from src.news.analyzer import NewsAnalyzer
@@ -14,13 +14,14 @@ FEEDS = ["https://cryptopanic.com/news/rss/", "https://cointelegraph.com/rss"]
 
 
 class NewsFetcher:
-    def __init__(self, analyzer: NewsAnalyzer):
+    def __init__(self, analyzer: NewsAnalyzer, market_scanner: Any = None):
         self.analyzer = analyzer
+        self.market_scanner = market_scanner
         self.dedup = DedupBuffer(max_size=1000)
         self.binance_scanner = BinanceAnnouncementsScanner()
 
     def fetch_latest_news(self) -> List[NewsItem]:
-        """Fetches and deduplicates from direct Binance announcements and fast feeds."""
+        """Fetches from Binance listings, RSS feeds, and 24-coin Spot breakouts."""
         items: List[NewsItem] = []
 
         # 1. Direct Binance Official Announcements (Highest Priority)
@@ -65,5 +66,11 @@ class NewsFetcher:
                         ))
             except Exception as e:
                 logger.debug(f"Feed fetch error from {url}: {e}")
+
+        # 3. Live Binance Spot Breakouts on 24 Halal Coins
+        if self.market_scanner:
+            for b in self.market_scanner.find_breakouts():
+                if not self.dedup.is_duplicate(b.news_id):
+                    items.append(b)
 
         return items

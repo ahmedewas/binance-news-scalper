@@ -37,8 +37,10 @@ def build_worker() -> BotWorker:
         config.trailing_tp_pct, config.trailing_offset_pct,
         config.stop_loss_pct, config.timeout_minutes
     )
+    from src.engine.market_scanner import MarketScanner
+    market_scanner = MarketScanner(exchange, regime, scoring)
     news_analyzer = NewsAnalyzer()
-    news_fetcher = NewsFetcher(news_analyzer)
+    news_fetcher = NewsFetcher(news_analyzer, market_scanner)
 
     return BotWorker(exchange, allocator, regime, scoring, risk, news_fetcher)
 
