@@ -1,9 +1,15 @@
-"""Wyckoff and quantitative market phase detector."""
+"""Wyckoff and quantitative market phase detector with FVG and SMC integration."""
 from typing import List, Dict, Any, Tuple
 from src.core.models import MarketPhase
+from src.core.fvg_detector import FVGDetector
+from src.core.volume_exhaustion import VolumeExhaustionDetector
 
 
 class MarketRegimeDetector:
+    def __init__(self):
+        self.fvg_detector = FVGDetector()
+        self.exhaustion_detector = VolumeExhaustionDetector()
+
     @staticmethod
     def _calculate_ema(prices: List[float], period: int) -> float:
         if not prices:
@@ -17,25 +23,39 @@ class MarketRegimeDetector:
     def detect_phase(
         self, klines: List[Dict[str, Any]]
     ) -> Tuple[MarketPhase, float]:
-        """Detects market phase and computes confidence score (0-100)."""
+        """Detects market phase synthesized with SMC FVG and Wyckoff Absorption."""
         if len(klines) < 30:
             return MarketPhase.ACCUMULATION, 50.0
+
+        # 1. SMC Fair Value Gap & Wyckoff Analysis
+        has_fvg, fvg_type, fvg_score, _ = self.fvg_detector.detect_latest_fvg(klines)
+        has_abs, abs_type, abs_score, _ = self.exhaustion_detector.analyze_absorption(klines)
+
+        if has_abs and abs_type == "WYCKOFF_UPTHRUST":
+            return MarketPhase.DISTRIBUTION, abs_score
+
+        if has_fvg and fvg_type == "BEARISH_FVG":
+            return MarketPhase.MARKDOWN, fvg_score
 
         closes = [float(k["close"]) for k in klines]
         ema_fast = self._calculate_ema(closes[-15:], 10)
         ema_slow = self._calculate_ema(closes[-30:], 25)
         current_close = closes[-1]
         prev_close = closes[-2]
-
         pct_diff = (current_close - ema_slow) / ema_slow if ema_slow else 0.0
 
         if ema_fast > ema_slow and current_close > ema_fast:
             score = min(100.0, 75.0 + max(0.0, pct_diff * 500))
+            if has_fvg and fvg_type == "BULLISH_FVG":
+                score = min(100.0, score + 10.0)
             return MarketPhase.MARKUP, score
 
         if ema_fast < ema_slow and current_close < ema_fast:
             score = min(100.0, 80.0 + abs(pct_diff * 500))
             return MarketPhase.MARKDOWN, score
+
+        if has_abs and abs_type == "WYCKOFF_SPRING":
+            return MarketPhase.ACCUMULATION, abs_score
 
         if current_close < prev_close and pct_diff > 0.03:
             return MarketPhase.DISTRIBUTION, 70.0
