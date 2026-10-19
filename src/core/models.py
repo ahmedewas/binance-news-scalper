@@ -45,6 +45,8 @@ class Position:
     entry_time: datetime
     slot_id: int
     is_breakeven_locked: bool = False
+    partial_tp_done: bool = False
+    entry_volume: float = 0.0
 
 
 @dataclass

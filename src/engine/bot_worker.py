@@ -1,5 +1,4 @@
 """Trading bot worker loop managing lifecycle, positions, and news execution."""
-import logging
 from datetime import datetime, timezone
 from typing import Dict, List, Any
 from src.core.models import Position
@@ -8,9 +7,10 @@ from src.core.portfolio_allocator import PortfolioAllocator
 from src.core.regime_detector import MarketRegimeDetector
 from src.core.scoring_engine import ScoringEngine
 from src.core.risk_manager import RiskManager
+from src.core.volume_decay_exit import VolumeDecayExitDetector
 from src.news.fetcher import NewsFetcher
-
-logger = logging.getLogger("BotWorker")
+from src.engine.position_handler import PositionHandler
+from src.engine.opportunity_executor import OpportunityExecutor
 
 
 class BotWorker:
@@ -29,26 +29,33 @@ class BotWorker:
         self.scoring_engine = scoring_engine
         self.risk_manager = risk_manager
         self.news_fetcher = news_fetcher
+        self.volume_decay_detector = VolumeDecayExitDetector()
         self.is_active = True
         self.positions: Dict[str, Position] = {}
         self.trade_history: List[Dict[str, Any]] = []
         self.latest_news: List[Dict[str, Any]] = []
 
     def manage_positions(self) -> None:
-        """Inspects all open positions against Dynamic Triple-Exit rules."""
+        """Inspects open positions against Dynamic Multi-Stage Triple-Exit rules."""
+        now = datetime.now(timezone.utc)
         for sym, pos in list(self.positions.items()):
             cur_price = self.exchange.get_ticker_price(sym)
-            should_exit, reason = self.risk_manager.evaluate_exit(pos, cur_price)
-            if should_exit:
-                res = self.exchange.place_market_sell(sym, pos.amount)
+            should_exit, reason, ratio = self.risk_manager.evaluate_exit(pos, cur_price, now)
+
+            if not should_exit and pos.entry_volume > 0:
+                elapsed = (now - pos.entry_time).total_seconds() / 60.0
                 pnl = (cur_price - pos.entry_price) / pos.entry_price
-                self.trade_history.append({
-                    "symbol": sym, "pnl_pct": round(pnl * 100, 2),
-                    "reason": reason, "exit_price": cur_price,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                })
-                del self.positions[sym]
-                logger.info(f"Closed {sym}: {reason} | PnL: {pnl*100:.2f}%")
+                klines = self.exchange.get_historical_klines(sym, "1m", 5)
+                decay_exit, decay_reason = self.volume_decay_detector.check_volume_decay(
+                    pos.entry_volume, klines, elapsed, pnl
+                )
+                if decay_exit:
+                    should_exit, reason, ratio = True, decay_reason, 1.0
+
+            if should_exit:
+                PositionHandler.execute_exit(
+                    self.exchange, self.positions, sym, reason, ratio, self.trade_history
+                )
 
     def process_news_opportunities(self) -> None:
         """Scans news and executes trades if quantitative criteria are met."""
@@ -58,36 +65,21 @@ class BotWorker:
             return
 
         active_slots = {p.slot_id for p in self.positions.values()}
-        slot_id = self.allocator.get_available_slot(alloc["total_slots"], active_slots)
+        locked_slots = {p.slot_id for p in self.positions.values() if p.is_breakeven_locked}
+        slot_id = self.allocator.get_available_slot(alloc["total_slots"], active_slots, locked_slots)
         if slot_id == -1:
             return
 
         for item in self.news_fetcher.fetch_latest_news():
             if item.symbol in self.positions:
                 continue
-            klines = self.exchange.get_historical_klines(item.symbol, "1m", 40)
-            phase, phase_score = self.regime_detector.detect_phase(klines)
-            score_res = self.scoring_engine.evaluate(
-                item.symbol, phase, phase_score, klines, item.sentiment_score
+            opened = OpportunityExecutor.evaluate_and_open(
+                item, slot_id, alloc["slot_size"], self.exchange,
+                self.regime_detector, self.scoring_engine,
+                self.positions, self.latest_news
             )
-            self.latest_news.append({
-                "symbol": item.symbol, "title": item.title, "score": score_res.total_score,
-                "approved": score_res.is_approved, "phase": phase.value
-            })
-            if len(self.latest_news) > 20:
-                self.latest_news.pop(0)
-
-            if score_res.is_approved:
-                order = self.exchange.place_market_buy(item.symbol, alloc["slot_size"])
-                if order.success:
-                    self.positions[item.symbol] = Position(
-                        symbol=item.symbol, entry_price=order.price,
-                        current_price=order.price, amount=order.amount,
-                        highest_price=order.price, entry_time=datetime.now(timezone.utc),
-                        slot_id=slot_id,
-                    )
-                    logger.info(f"Opened {item.symbol} at {order.price} (Slot {slot_id})")
-                    break
+            if opened:
+                break
 
     def step(self) -> None:
         if not self.is_active:
