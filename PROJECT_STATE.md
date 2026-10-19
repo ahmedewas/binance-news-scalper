@@ -1,6 +1,9 @@
 # Living Memory & Project State Tracking: Binance News Scalper
 
 ## 1. Locked Working Modules (قائمة الخطوط الحمراء)
+- [x] **Direct Binance Announcements Engine (`src/news/binance_announcements.py`):** Sub-second CMS polling for instant new listings and launchpools.
+- [x] **Semantic Catalyst Classifier (`src/news/semantic_scorer.py`):** Institutional tier ranking (Tier-1 Listing, Tier-2 Partner) with negation and rumor filter.
+- [x] **Cryptographic Dedup Ring-Buffer (`src/news/dedup_buffer.py`):** SHA-256 fingerprinting for 0ms duplicate execution.
 - [x] **Smart Money FVG Detector (`src/core/fvg_detector.py`):** 3-candle institutional liquidity imbalance and Fair Value Gap expansion detection.
 - [x] **Wyckoff Volume Absorption (`src/core/volume_exhaustion.py`):** Order absorption wicks (Springs) and distribution upthrust wicks (UTADs).
 - [x] **Institutional Regime Engine (`src/core/regime_detector.py`):** Multi-timeframe trend synthesized with FVG imbalances and Wyckoff Springs.
@@ -23,13 +26,16 @@
 - [x] **24/7 Background Trading Worker (`src/engine/`):** Independent daemon running continuously regardless of client connection.
 - [x] **Mobile PWA Dashboard (`src/web/`):** Dark mode, responsive web UI with one-click toggles and emergency exit.
 - [x] **100-Line Modularity Compliance:** 100% of codebase files strictly <= 100 lines.
-- [x] **Automated Test Suite:** 38/38 unit and regression tests passing with 100% success rate.
+- [x] **Automated Test Suite:** 48/48 unit and regression tests passing with 100% success rate.
 - [x] **GitHub Remote Repository:** Synced with `https://github.com/ahmedewas/binance-news-scalper` (branch: `main`).
 
 ## 2. Cumulative Requirements Registry (سجل المتطلبات التراكمية)
 1. **Spot Only:** No leverage, zero liquidation risk.
 2. **Capital Velocity:** Swift turnover with 20-minute maximum trade life and Breakeven Slot Unlocking.
 3. **Institutional Alpha Edge:**
+   - Sub-second direct Binance CMS listing announcements scanner.
+   - Contextual semantic catalyst classification (Tier 1-3) with negation defense.
+   - SHA-256 cryptographic headline deduplication.
    - SMC Fair Value Gap (FVG) liquidity void expansion.
    - Wyckoff Volume Absorption (Springs) and Distribution Upthrusts (UTAD).
    - Fractional Kelly Criterion sizing based on empirical edge.
@@ -42,6 +48,6 @@
 6. **Mobile Independence:** Continues executing in cloud even when phone is powered off.
 
 ## 3. Active Sprint Status
-- **Status:** Part 2 (Institutional Market Regime, FVG & Wyckoff) fully implemented and verified.
-- **Verification:** 38/38 unit tests passed. All files <= 100 lines.
-- **Next Step:** Ready for Part 3 review (News Radar & Sub-Second WebSocket Streaming).
+- **Status:** Part 3 (Sub-Second News, Direct Binance CMS & Semantic NLP) fully verified.
+- **Verification:** 48/48 unit tests passed. All files <= 100 lines.
+- **Next Step:** Ready for Part 4 review (Dual-Mode Execution & Dynamic Triple-Exit Engine).
