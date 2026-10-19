@@ -21,6 +21,7 @@ class OpportunityExecutor:
         scoring_engine: ScoringEngine,
         positions: Dict[str, Position],
         latest_news: List[Dict[str, Any]],
+        journal: Any = None,
     ) -> bool:
         """Evaluates quantitative criteria and executes market buy if approved."""
         klines = exchange.get_historical_klines(item.symbol, "1m", 40)
@@ -48,6 +49,12 @@ class OpportunityExecutor:
                 highest_price=order.price, entry_time=datetime.now(timezone.utc),
                 slot_id=slot_id, entry_volume=entry_vol,
             )
+            if journal:
+                journal.log_trade_opened(
+                    {"symbol": item.symbol, "entry_price": order.price, "cost_basis": slot_size,
+                     "target_tp": round(order.price * 1.012, 4), "stop_loss": round(order.price * 0.991, 4), "slot_id": slot_id},
+                    item.title, score_res.total_score, phase.value
+                )
             logger.info(f"Opened {item.symbol} at {order.price} (Slot {slot_id})")
             return True
 

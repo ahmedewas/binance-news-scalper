@@ -66,6 +66,13 @@ function renderRadar(r) {
     c.innerHTML = `<table class="table"><tr><th>العملة</th><th>السعر</th><th>مرحلة السوق</th><th>التقييم</th><th>الحالة</th></tr>` +
         r.map(m => `<tr><td>${m.symbol}</td><td>$${m.price}</td><td>${m.phase}</td><td>${m.score}/100</td><td>${m.approved?'🚀 جاهز':m.score<75?'⏳ تحت 75':m.status}</td></tr>`).join('') + `</table>`;
 }
+async function fetchJournal() {
+    try {
+        const res = await fetch('/api/journal'), data = await res.json();
+        const box = document.getElementById('journal-box');
+        if (box) box.innerText = data.journal || 'لا توجد سجلات بعد.';
+    } catch(e) {}
+}
 async function toggleBot() { await fetch('/api/toggle', {method: 'POST'}); fetchStatus(); }
 async function emergencyClose() { if (confirm("إغلاق كافة الصفقات فوراً؟")) { await fetch('/api/close_all', {method: 'POST'}); fetchStatus(); } }
-setInterval(fetchStatus, 3000); fetchStatus();
+setInterval(fetchStatus, 3000); setInterval(fetchJournal, 10000); fetchStatus(); fetchJournal();

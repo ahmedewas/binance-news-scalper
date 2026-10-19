@@ -63,4 +63,8 @@ def create_app(worker: BotWorker) -> FastAPI:
             del worker.positions[sym]
         return {"status": "ALL_POSITIONS_CLOSED"}
 
+    @app.get("/api/journal")
+    def get_journal():
+        return {"journal": worker.journal.read_journal()}
+
     return app
