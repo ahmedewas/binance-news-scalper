@@ -44,6 +44,7 @@ class Position:
     highest_price: float
     entry_time: datetime
     slot_id: int
+    is_breakeven_locked: bool = False
 
 
 @dataclass

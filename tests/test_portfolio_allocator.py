@@ -43,3 +43,8 @@ def test_slot_assignment():
     active_full = {1, 2, 3}
     avail_full = allocator.get_available_slot(3, active_full)
     assert avail_full == -1
+
+    # Test Breakeven Velocity Unlock: slot 1 is zero-risk locked
+    unlocked = allocator.get_available_slot(3, active_full, breakeven_locked_ids={1})
+    assert unlocked == 101  # Virtual velocity slot unlocked
+

@@ -57,3 +57,21 @@ def test_normal_hold():
     should_exit, reason = risk.evaluate_exit(pos, current_price=100.5)
     assert not should_exit
     assert reason == "HOLD"
+
+
+def test_breakeven_lock_activation_and_safe_exit():
+    risk = RiskManager(breakeven_trigger_pct=0.006, fee_coverage_pct=0.002)
+    pos = Position(
+        symbol="SOL/USDT", entry_price=100.0, current_price=100.0,
+        amount=1.0, highest_price=100.0,
+        entry_time=datetime.now(timezone.utc), slot_id=1,
+    )
+    # Price rises to 100.7 (+0.7%), activating breakeven lock
+    risk.evaluate_exit(pos, current_price=100.7)
+    assert pos.is_breakeven_locked
+
+    # Price drops back down towards entry to 100.1 (below 100.2 fee coverage)
+    should_exit, reason = risk.evaluate_exit(pos, current_price=100.1)
+    assert should_exit
+    assert "BREAKEVEN_EXIT" in reason
+

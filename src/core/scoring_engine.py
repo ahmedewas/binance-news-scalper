@@ -15,6 +15,8 @@ class ScoringEngine:
         klines: List[Dict[str, Any]],
         news_sentiment: float,
         cvd_score: Optional[float] = None,
+        hurst_score: Optional[float] = None,
+        mm_depletion_score: Optional[float] = None,
     ) -> ScoringResult:
         """Computes weighted probability score and approves or rejects trade."""
         if phase in (MarketPhase.DISTRIBUTION, MarketPhase.MARKDOWN):
@@ -23,6 +25,14 @@ class ScoringEngine:
                 momentum_score=0.0, volume_score=0.0, news_score=news_sentiment,
                 total_score=0.0, is_approved=False,
                 rejection_reason=f"Bull Trap Protection: Phase {phase.value}",
+            )
+
+        if hurst_score is not None and hurst_score < 30.0:
+            return ScoringResult(
+                symbol=symbol, phase=phase, phase_score=phase_score,
+                momentum_score=0.0, volume_score=0.0, news_score=news_sentiment,
+                total_score=0.0, is_approved=False,
+                rejection_reason="Chaos Filter: Market in anti-persistent Brownian noise",
             )
 
         if cvd_score is not None and cvd_score < 40.0:
@@ -42,18 +52,16 @@ class ScoringEngine:
         ret = (closes[-1] - closes[0]) / closes[0] if closes[0] > 0 else 0.0
         momentum_score = min(100.0, max(0.0, 50.0 + ret * 1000.0))
 
+        # Dynamic Multi-Factor Weighting
+        scores = [phase_score, momentum_score, volume_score, news_sentiment]
         if cvd_score is not None:
-            total = (
-                0.20 * phase_score + 0.20 * momentum_score +
-                0.20 * volume_score + 0.20 * news_sentiment + 0.20 * cvd_score
-            )
-        else:
-            total = (
-                0.25 * phase_score + 0.25 * momentum_score +
-                0.25 * volume_score + 0.25 * news_sentiment
-            )
+            scores.append(cvd_score)
+        if hurst_score is not None:
+            scores.append(hurst_score)
+        if mm_depletion_score is not None:
+            scores.append(mm_depletion_score)
 
-        total = round(total, 2)
+        total = round(sum(scores) / len(scores), 2)
         approved = total >= self.min_score
         reason = None if approved else f"Score {total} < Threshold {self.min_score}"
 
