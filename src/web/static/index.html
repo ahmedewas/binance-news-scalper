@@ -48,9 +48,11 @@
 <body>
     <div class="header">
         <div class="title">⚡ Binance News Scalper</div>
-        <div>
+        <div style="display: flex; gap: 6px; align-items: center;">
+            <span id="latency-badge" class="badge" style="background:#334155; color:#38bdf8;">-- ms</span>
             <span id="mode-badge" class="badge badge-paper">PAPER</span>
             <span id="status-badge" class="badge badge-active">ACTIVE</span>
+            <button id="sound-btn" onclick="toggleAudio()" style="padding: 4px 8px; font-size: 0.75rem; background: #1e293b; border: 1px solid var(--border); color: #f8fafc; border-radius: 6px; cursor: pointer;">🔔</button>
         </div>
     </div>
 
@@ -90,11 +92,41 @@
     </div>
 
     <script>
+        let soundEnabled = true;
+        let audioCtx = null;
+        let lastNewsCount = 0;
+
+        function toggleAudio() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('sound-btn').innerText = soundEnabled ? '🔔' : '🔕';
+        }
+
+        function playAlertChime(freq = 880) {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.35);
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            } catch(e) {}
+        }
+
         async function fetchStatus() {
             try {
+                const t0 = performance.now();
                 const res = await fetch('/api/status');
+                const latency = Math.round(performance.now() - t0);
                 const data = await res.json();
                 
+                document.getElementById('latency-badge').innerText = `${latency} ms`;
                 document.getElementById('balance').innerText = `$${data.usdt_balance.toFixed(2)}`;
                 document.getElementById('slot-size').innerText = `$${data.allocation.slot_size.toFixed(2)}`;
                 document.getElementById('slots-info').innerText = `عدد الخانات الكلي: ${data.allocation.total_slots} | صفقات نشطة: ${data.open_positions.length}`;
@@ -106,6 +138,11 @@
                 const sb = document.getElementById('status-badge');
                 sb.innerText = data.is_active ? 'ACTIVE' : 'PAUSED';
                 sb.className = data.is_active ? 'badge badge-active' : 'badge badge-paused';
+
+                if (data.latest_news && data.latest_news.length > lastNewsCount) {
+                    if (lastNewsCount > 0) playAlertChime(987.77);
+                    lastNewsCount = data.latest_news.length;
+                }
 
                 renderPositions(data.open_positions);
                 renderNews(data.latest_news);
