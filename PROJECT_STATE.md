@@ -50,7 +50,15 @@
 5. **Dual Mode:** Paper trading default, toggleable to Live.
 6. **Mobile Independence:** Continues executing in cloud even when phone is powered off.
 
+- [x] **Performance & Hourly Session Tracker (`src/core/performance_tracker.py`):** Live hourly snapshots, win-rate calculation, PnL tracking, and Arabic exit reason translation.
+- [x] **Live Market Quant Radar (`src/engine/market_scanner.py`):** Continuous scanning of top liquid pairs (BTC, ETH, SOL, BNB, NEAR, FET) showing live prices, Wyckoff regimes, and composite scores.
+- [x] **Rich Position & Exit Detail UI (`src/web/`):** Full transparency showing entry/current prices, capital invested, dollar/percent PnL, target prices, timeout countdowns, and detailed Arabic exit reasons.
+
 ## 3. Active Sprint Status
-- **Status:** Part 4 (Execution & Asymmetric Scale-Out Engine) fully verified.
-- **Verification:** 51/51 unit tests passed. All files <= 100 lines.
-- **Next Step:** Ready for Part 5 review (Web Dashboard, Mobile PWA & Local Interactive Run).
+- **Status:** Enhanced Transparency, Hourly Tracker & Live Market Radar Deployed.
+- **Verification:** 55/55 unit tests passed (0.52s). All files strictly <= 100 lines.
+- **Launchers Created:**
+  - `C:\Users\alpraa\.gemini\antigravity\scratch\binance_news_scalper\run.bat`
+  - `C:\Users\alpraa\Desktop\تشغيل_بوت_بينانس.bat` (Desktop shortcut)
+- **Active Task:** User running 8-hour live market simulation on PAPER mode (15$ initial capital, 3 slots) with hourly review capability.
+

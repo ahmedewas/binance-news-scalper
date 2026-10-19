@@ -32,13 +32,23 @@ class PositionHandler:
             return
 
         pnl = (cur_price - pos.entry_price) / pos.entry_price
+        pnl_usd = (cur_price - pos.entry_price) * sell_qty
+        duration = round((datetime.now(timezone.utc) - pos.entry_time).total_seconds() / 60, 1)
+
+        from src.core.performance_tracker import PerformanceTracker
+        arabic_reason = PerformanceTracker.translate_reason(reason)
+
         trade_history.append({
             "symbol": symbol,
-            "pnl_pct": round(pnl * 100, 2),
-            "reason": reason,
+            "entry_price": pos.entry_price,
             "exit_price": cur_price,
+            "pnl_pct": round(pnl * 100, 2),
+            "pnl_usd": round(pnl_usd, 4),
+            "reason": reason,
+            "reason_arabic": arabic_reason,
+            "duration_mins": duration,
             "ratio": exit_ratio,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(timezone.utc).strftime("%H:%M:%S"),
         })
 
         if exit_ratio >= 0.99:

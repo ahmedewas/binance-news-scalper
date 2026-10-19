@@ -9,6 +9,7 @@ from src.core.scoring_engine import ScoringEngine
 from src.core.risk_manager import RiskManager
 from src.core.volume_decay_exit import VolumeDecayExitDetector
 from src.news.fetcher import NewsFetcher
+from src.core.performance_tracker import PerformanceTracker
 from src.engine.position_handler import PositionHandler
 from src.engine.opportunity_executor import OpportunityExecutor
 
@@ -30,6 +31,7 @@ class BotWorker:
         self.risk_manager = risk_manager
         self.news_fetcher = news_fetcher
         self.volume_decay_detector = VolumeDecayExitDetector()
+        self.tracker = PerformanceTracker()
         self.is_active = True
         self.positions: Dict[str, Position] = {}
         self.trade_history: List[Dict[str, Any]] = []
@@ -56,6 +58,9 @@ class BotWorker:
                 PositionHandler.execute_exit(
                     self.exchange, self.positions, sym, reason, ratio, self.trade_history
                 )
+                if self.trade_history:
+                    last = self.trade_history[-1]
+                    self.tracker.record_trade(last["symbol"], last["pnl_pct"], last["pnl_usd"], last["reason"])
 
     def process_news_opportunities(self) -> None:
         """Scans news and executes trades if quantitative criteria are met."""
