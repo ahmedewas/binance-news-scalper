@@ -40,7 +40,7 @@ class MarketScanner:
                 price = self.exchange.get_ticker_price(sym)
                 klines = self.exchange.get_historical_klines(sym, "1m", 25)
                 phase, phase_score = self.regime_detector.detect_phase(klines)
-                score_res = self.scoring_engine.evaluate(sym, phase, phase_score, klines, 0.75)
+                score_res = self.scoring_engine.evaluate(sym, phase, phase_score, klines, 75.0)
                 results.append({
                     "symbol": sym, "price": price, "phase": phase.value,
                     "score": score_res.total_score, "approved": score_res.is_approved,
@@ -61,7 +61,7 @@ class MarketScanner:
                     title=f"[SPOT FLOW] {r['symbol']} Quantitative Surge | Score {r['score']:.1f}/100",
                     source="binance_spot_flow",
                     symbol=r["symbol"],
-                    sentiment_score=0.85,
+                    sentiment_score=85.0,
                     published_at=datetime.now(timezone.utc),
                 ))
         return breakouts

@@ -19,6 +19,9 @@ class ScoringEngine:
         mm_depletion_score: Optional[float] = None,
     ) -> ScoringResult:
         """Computes weighted probability score and approves or rejects trade."""
+        if 0.0 < news_sentiment <= 1.0:
+            news_sentiment = news_sentiment * 100.0
+
         if phase in (MarketPhase.DISTRIBUTION, MarketPhase.MARKDOWN):
             return ScoringResult(
                 symbol=symbol, phase=phase, phase_score=phase_score,

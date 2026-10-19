@@ -59,11 +59,18 @@
 - [x] **24 Halal Spot Coins & Flow Breakouts (`src/engine/market_scanner.py` & `src/news/fetcher.py`):** Expanded from 6 to 24 premier Halal Spot technology/AI cryptocurrencies, ingesting quantitative flow breakouts directly into the execution engine.
 
 ## 3. Active Sprint Status
-- **Status:** Expanded 24-Coin Halal Spot Universe & Real-Time Flow Breakouts Active.
-- **Verification:** 56/56 unit tests passed (0.65s). All files strictly <= 100 lines.
-- **Launchers Created:**
-  - `C:\Users\alpraa\.gemini\antigravity\scratch\binance_news_scalper\run.bat`
-  - `C:\Users\alpraa\Desktop\تشغيل_بوت_بينانس.bat` (Desktop shortcut)
-  - `C:\Users\alpraa\Desktop\فتح_سجل_الصفقات.bat` (Journal Notepad shortcut)
-- **Active Task:** User running 8-hour live market simulation on PAPER mode (15$ initial capital, 3 slots) with 24 Halal Spot coins, audit journal, and hourly review.
+- **Status:** Atomic Review Completed & Production-Grade Optimizations Applied.
+- **Atomic Review Bugs Discovered & Resolved:**
+  1. *UI Radar Blocking*: Fixed 24-coin synchronous scan blocking `/api/status`; switched to background cache, reducing endpoint latency from >5s timeout to 1ms.
+  2. *Net Equity Accounting*: Fixed equity calculation in `app.py` and `performance_tracker.py` so invested cash in open positions is not miscalculated as loss.
+  3. *Scoring Scale Normalization*: Fixed 0.75/0.85 fractional scale in `market_scanner.py` and added defensive normalization in `scoring_engine.py`.
+  4. *HTTP Keep-Alive Pooling*: Added `requests.Session()` pooling in `PaperExchange` and `BinanceAnnouncementsScanner`.
+  5. *Manual UI Exit Logging*: Linked `/api/close_all` to `PositionHandler` and `AuditJournal`.
+  6. *Halal Ticker Alignment*: Synchronized 24 Halal Spot coins in `NewsAnalyzer`.
+  7. *NewsFetcher Unit Testing*: Added `test_news_fetcher.py` and verified complete module imports.
+- **Verification:** 59/59 unit tests passed (0.77s). 100% of codebase files strictly <= 100 lines.
+- **Launchers Ready:**
+  - `C:\Users\alpraa\Desktop\تشغيل_بوت_بينانس.bat` (Desktop 1-click launcher)
+  - `C:\Users\alpraa\Desktop\فتح_سجل_الصفقات.bat` (Desktop journal viewer)
+- **Active Mode:** PAPER mode (15$ initial capital, 3 slots x 5$), 24 Halal Spot coins, ready for 8-hour trial run.
 

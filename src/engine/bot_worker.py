@@ -17,13 +17,9 @@ from src.engine.opportunity_executor import OpportunityExecutor
 
 class BotWorker:
     def __init__(
-        self,
-        exchange: BaseExchange,
-        allocator: PortfolioAllocator,
-        regime_detector: MarketRegimeDetector,
-        scoring_engine: ScoringEngine,
-        risk_manager: RiskManager,
-        news_fetcher: NewsFetcher,
+        self, exchange: BaseExchange, allocator: PortfolioAllocator,
+        regime_detector: MarketRegimeDetector, scoring_engine: ScoringEngine,
+        risk_manager: RiskManager, news_fetcher: NewsFetcher,
     ):
         self.exchange = exchange
         self.allocator = allocator
@@ -44,6 +40,8 @@ class BotWorker:
         now = datetime.now(timezone.utc)
         for sym, pos in list(self.positions.items()):
             cur_price = self.exchange.get_ticker_price(sym)
+            if cur_price <= 0:
+                continue
             should_exit, reason, ratio = self.risk_manager.evaluate_exit(pos, cur_price, now)
 
             if not should_exit and pos.entry_volume > 0:
@@ -61,14 +59,15 @@ class BotWorker:
                     self.exchange, self.positions, sym, reason, ratio, self.trade_history
                 )
                 if self.trade_history:
-                    last = self.trade_history[-1]
-                    self.tracker.record_trade(last["symbol"], last["pnl_pct"], last["pnl_usd"], last["reason"])
-                    self.journal.log_trade_closed(last, self.exchange.get_balance("USDT"))
+                    l = self.trade_history[-1]
+                    self.tracker.record_trade(l["symbol"], l["pnl_pct"], l["pnl_usd"], l["reason"])
+                    self.journal.log_trade_closed(l, self.exchange.get_balance("USDT"))
 
     def process_news_opportunities(self) -> None:
         """Scans news and executes trades if quantitative criteria are met."""
         usdt = self.exchange.get_balance("USDT")
-        alloc = self.allocator.calculate_slots(usdt)
+        eq = usdt + sum(p.amount * p.current_price for p in self.positions.values())
+        alloc = self.allocator.calculate_slots(usdt, eq)
         if not alloc["can_trade"]:
             return
 

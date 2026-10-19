@@ -15,17 +15,18 @@ BINANCE_CMS_URL = (
 class BinanceAnnouncementsScanner:
     def __init__(self, timeout: int = 4):
         self.timeout = timeout
-        self.headers = {
+        self.session = requests.Session()
+        self.session.headers.update({
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             )
-        }
+        })
 
     def fetch_announcements(self) -> List[Dict[str, Any]]:
         """Fetches raw latest announcements directly from Binance CMS."""
         try:
-            r = requests.get(BINANCE_CMS_URL, headers=self.headers, timeout=self.timeout)
+            r = self.session.get(BINANCE_CMS_URL, timeout=self.timeout)
             if r.status_code == 200:
                 data = r.json()
                 articles = (

@@ -16,6 +16,7 @@ class LiveExchange(BaseExchange):
             "enableRateLimit": True,
             "options": {"defaultType": "spot"},
         })
+        self._price_cache: Dict[str, float] = {}
 
     def get_balance(self, asset: str = "USDT") -> float:
         try:
@@ -28,10 +29,13 @@ class LiveExchange(BaseExchange):
     def get_ticker_price(self, symbol: str) -> float:
         try:
             ticker = self.client.fetch_ticker(symbol)
-            return float(ticker.get("last", 0.0))
+            p = float(ticker.get("last", 0.0))
+            if p > 0:
+                self._price_cache[symbol] = p
+            return p or self._price_cache.get(symbol, 0.0)
         except Exception as e:
             logger.error(f"Error fetching ticker for {symbol}: {e}")
-            return 0.0
+            return self._price_cache.get(symbol, 0.0)
 
     def get_historical_klines(
         self, symbol: str, timeframe: str = "1m", limit: int = 50
@@ -68,7 +72,8 @@ class LiveExchange(BaseExchange):
 
     def place_market_sell(self, symbol: str, amount: float) -> OrderResult:
         try:
-            order = self.client.create_market_sell_order(symbol, amount)
+            qty = float(self.client.amount_to_precision(symbol, amount)) if hasattr(self.client, "amount_to_precision") else amount
+            order = self.client.create_market_sell_order(symbol, qty)
             price = float(order.get("average") or order.get("price") or 0.0)
             filled = float(order.get("filled") or amount)
             return OrderResult(

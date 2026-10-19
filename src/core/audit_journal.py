@@ -18,7 +18,7 @@ class AuditJournal:
     def log_trade_opened(self, p: Dict[str, Any], reason: str, score: float, regime: str) -> None:
         now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         clean_sym = p["symbol"].replace("/", "_")
-        binance_url = f"https://www.binance.com/en/trade/{clean_sym}"
+        binance_url = f"https://www.binance.com/en/trade/{clean_sym}?type=spot"
         entry = (
             f"\n### 🟢 فتح صفقة جديدة: `{p['symbol']}` (خانة {p.get('slot_id', 1)})\n"
             f"- **التوقيت:** `{now_str}`\n"

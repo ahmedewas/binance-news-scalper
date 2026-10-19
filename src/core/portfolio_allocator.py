@@ -14,27 +14,27 @@ class PortfolioAllocator:
         self.max_slots = max_slots
         self.fee_buffer = fee_buffer
 
-    def calculate_slots(self, usdt_balance: float) -> Dict[str, Any]:
-        """Calculates dynamic slots and allocation after reserving fee buffer."""
-        tradable = max(0.0, usdt_balance - self.fee_buffer)
-        if tradable < self.min_notional:
+    def calculate_slots(
+        self, usdt_balance: float, total_equity: Optional[float] = None
+    ) -> Dict[str, Any]:
+        """Calculates dynamic slots based on equity, ensuring free cash can open slots."""
+        equity = total_equity if total_equity is not None else usdt_balance
+        tradable_equity = max(0.0, equity - self.fee_buffer)
+
+        if tradable_equity < self.min_notional:
             return {
-                "total_slots": 0,
-                "slot_size": 0.0,
-                "can_trade": False,
-                "reason": f"Tradable {tradable:.2f} < Min {self.min_notional}",
+                "total_slots": 0, "slot_size": 0.0, "can_trade": False,
+                "reason": f"Equity {tradable_equity:.2f} < Min {self.min_notional}",
             }
 
-        calculated_slots = math.floor(usdt_balance / self.min_notional)
+        calculated_slots = math.floor(tradable_equity / self.min_notional)
         total_slots = min(self.max_slots, max(1, calculated_slots))
-        tradable = max(0.0, usdt_balance - self.fee_buffer)
-        slot_size = round(max(self.min_notional, tradable / total_slots), 2)
+        slot_size = round(max(self.min_notional, tradable_equity / total_slots), 2)
+        can_trade = usdt_balance >= (self.min_notional - 0.01)
 
         return {
-            "total_slots": total_slots,
-            "slot_size": slot_size,
-            "can_trade": True,
-            "reason": "OK",
+            "total_slots": total_slots, "slot_size": slot_size,
+            "can_trade": can_trade, "reason": "OK" if can_trade else f"Cash {usdt_balance:.2f} < {slot_size}",
         }
 
     def get_available_slot(

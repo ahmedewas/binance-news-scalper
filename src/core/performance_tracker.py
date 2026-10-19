@@ -43,6 +43,7 @@ class PerformanceTracker:
         elapsed_mins = round((now - self.start_time).total_seconds() / 60, 1)
         wins = sum(1 for t in self.trades if t["pnl_pct"] > 0)
         losses = sum(1 for t in self.trades if t["pnl_pct"] < 0)
+        realized_pnl_usd = sum(t["pnl_usd"] for t in self.trades)
         total_pnl_usd = round(current_balance - self.initial_balance, 4)
         total_pnl_pct = round((total_pnl_usd / self.initial_balance) * 100, 2)
         win_rate = round((wins / len(self.trades) * 100), 1) if self.trades else 0.0
@@ -50,6 +51,7 @@ class PerformanceTracker:
         return {
             "initial_balance": self.initial_balance,
             "current_balance": round(current_balance, 2),
+            "realized_pnl_usd": round(realized_pnl_usd, 4),
             "total_pnl_usd": total_pnl_usd,
             "total_pnl_pct": total_pnl_pct,
             "total_trades": len(self.trades),
@@ -63,6 +65,8 @@ class PerformanceTracker:
 
     @staticmethod
     def translate_reason(reason: str) -> str:
+        if "MANUAL_CLOSE" in reason:
+            return "✋ إغلاق يدوي فوري من لوحة التحكم بطلب المستخدم"
         if "STOP_LOSS" in reason:
             return "🛑 ضرب وقف الخسارة الصارم (-0.9%) لحماية رأس المال بعد انعكاس السعر"
         if "TRAILING_TP" in reason:

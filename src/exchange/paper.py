@@ -11,6 +11,8 @@ class PaperExchange(BaseExchange):
         self.usdt_balance = float(initial_usdt)
         self.holdings: Dict[str, float] = {}
         self.fee_rate = 0.001  # 0.1% spot fee
+        self._price_cache: Dict[str, float] = {}
+        self.session = requests.Session()
 
     def get_balance(self, asset: str = "USDT") -> float:
         if asset == "USDT":
@@ -20,15 +22,17 @@ class PaperExchange(BaseExchange):
     def get_ticker_price(self, symbol: str) -> float:
         clean = symbol.replace("/", "").upper()
         try:
-            r = requests.get(
+            r = self.session.get(
                 f"https://api.binance.com/api/v3/ticker/price?symbol={clean}",
                 timeout=3,
             )
             if r.status_code == 200:
-                return float(r.json()["price"])
+                p = float(r.json()["price"])
+                self._price_cache[clean] = p
+                return p
         except Exception:
             pass
-        return 1.0
+        return self._price_cache.get(clean, 0.0)
 
     def get_historical_klines(
         self, symbol: str, timeframe: str = "1m", limit: int = 50
@@ -36,7 +40,7 @@ class PaperExchange(BaseExchange):
         clean = symbol.replace("/", "").upper()
         try:
             url = f"https://api.binance.com/api/v3/klines?symbol={clean}&interval={timeframe}&limit={limit}"
-            r = requests.get(url, timeout=4)
+            r = self.session.get(url, timeout=4)
             if r.status_code == 200:
                 return [
                     {

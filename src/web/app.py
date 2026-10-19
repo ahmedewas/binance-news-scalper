@@ -8,6 +8,7 @@ from src.engine.bot_worker import BotWorker
 from src.config import config
 from src.core.performance_tracker import PerformanceTracker
 from src.engine.market_scanner import MarketScanner
+from src.engine.position_handler import PositionHandler
 
 
 def create_app(worker: BotWorker) -> FastAPI:
@@ -15,7 +16,9 @@ def create_app(worker: BotWorker) -> FastAPI:
     static_dir = os.path.join(os.path.dirname(__file__), "static")
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
     tracker = getattr(worker, "tracker", PerformanceTracker(config.initial_paper_balance))
-    scanner = MarketScanner(worker.exchange, worker.regime_detector, worker.scoring_engine)
+    scanner = getattr(worker.news_fetcher, "market_scanner", None) or MarketScanner(
+        worker.exchange, worker.regime_detector, worker.scoring_engine
+    )
 
     @app.get("/")
     def serve_dashboard():
@@ -24,7 +27,8 @@ def create_app(worker: BotWorker) -> FastAPI:
     @app.get("/api/status")
     def get_status():
         usdt = worker.exchange.get_balance("USDT")
-        alloc = worker.allocator.calculate_slots(usdt)
+        eq = usdt + sum(p.amount * p.current_price for p in worker.positions.values())
+        alloc = worker.allocator.calculate_slots(usdt, eq)
         now = datetime.now(timezone.utc)
         positions_data = []
         for p in worker.positions.values():
@@ -47,8 +51,8 @@ def create_app(worker: BotWorker) -> FastAPI:
             "mode": config.trading_mode, "is_active": worker.is_active,
             "usdt_balance": usdt, "allocation": alloc, "open_positions": positions_data,
             "trade_history": worker.trade_history[-15:], "latest_news": worker.latest_news[-10:],
-            "performance": tracker.get_summary(usdt),
-            "market_radar": scanner.scan_if_needed(15.0),
+            "performance": tracker.get_summary(eq),
+            "market_radar": scanner.cached_results,
         })
 
     @app.post("/api/toggle")
@@ -58,9 +62,14 @@ def create_app(worker: BotWorker) -> FastAPI:
 
     @app.post("/api/close_all")
     def close_all():
-        for sym, pos in list(worker.positions.items()):
-            worker.exchange.place_market_sell(sym, pos.amount)
-            del worker.positions[sym]
+        for sym in list(worker.positions.keys()):
+            PositionHandler.execute_exit(
+                worker.exchange, worker.positions, sym, "MANUAL_CLOSE", 1.0, worker.trade_history
+            )
+            if worker.trade_history:
+                l = worker.trade_history[-1]
+                worker.tracker.record_trade(l["symbol"], l["pnl_pct"], l["pnl_usd"], l["reason"])
+                worker.journal.log_trade_closed(l, worker.exchange.get_balance("USDT"))
         return {"status": "ALL_POSITIONS_CLOSED"}
 
     @app.get("/api/journal")

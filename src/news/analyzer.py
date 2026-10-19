@@ -4,9 +4,9 @@ from typing import Optional, Tuple
 from src.news.semantic_scorer import SemanticScorer
 
 POPULAR_TICKERS = {
-    "BTC", "ETH", "SOL", "BNB", "XRP", "ADA", "AVAX", "DOGE",
-    "NEAR", "SUI", "APT", "INJ", "LINK", "ARB", "OP", "TIA",
-    "SEI", "RENDER", "FET", "PEPE", "SHIB", "DOT", "MATIC"
+    "BTC", "ETH", "SOL", "BNB", "XRP", "ADA", "AVAX", "SUI",
+    "LINK", "NEAR", "FET", "APT", "DOT", "RENDER", "TAO", "TIA",
+    "SEI", "INJ", "ATOM", "OP", "ARB", "ALGO", "POL", "FTM"
 }
 
 
