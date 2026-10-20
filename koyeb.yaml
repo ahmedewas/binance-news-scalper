@@ -21,3 +21,5 @@ services:
         value: PAPER
       - key: PORT
         value: "8080"
+      - key: HOST
+        value: "0.0.0.0"

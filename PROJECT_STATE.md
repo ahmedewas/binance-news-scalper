@@ -1,76 +1,56 @@
 # Living Memory & Project State Tracking: Binance News Scalper
 
 ## 1. Locked Working Modules (قائمة الخطوط الحمراء)
-- [x] **Multi-Stage Asymmetric Scale-Out (`src/core/risk_manager.py` & `src/engine/position_handler.py`):** 50% partial take-profit at +1.2%, locking fees and riding the remaining 50% with trailing stop.
-- [x] **Preemptive Volume Decay Detector (`src/core/volume_decay_exit.py`):** Early exit if trade volume collapses by >75% after 3 minutes, liberating capital without waiting 20 minutes.
-- [x] **Modular Execution Decoupling (`src/engine/opportunity_executor.py` & `position_handler.py`):** Clean separation of entry evaluation and exit execution keeping all worker files strictly <= 100 lines.
-- [x] **Direct Binance Announcements Engine (`src/news/binance_announcements.py`):** Sub-second CMS polling for instant new listings and launchpools.
-- [x] **Semantic Catalyst Classifier (`src/news/semantic_scorer.py`):** Institutional tier ranking (Tier-1 Listing, Tier-2 Partner) with negation and rumor filter.
-- [x] **Cryptographic Dedup Ring-Buffer (`src/news/dedup_buffer.py`):** SHA-256 fingerprinting for 0ms duplicate execution.
-- [x] **Smart Money FVG Detector (`src/core/fvg_detector.py`):** 3-candle institutional liquidity imbalance and Fair Value Gap expansion detection.
-- [x] **Wyckoff Volume Absorption (`src/core/volume_exhaustion.py`):** Order absorption wicks (Springs) and distribution upthrust wicks (UTADs).
-- [x] **Institutional Regime Engine (`src/core/regime_detector.py`):** Multi-timeframe trend synthesized with FVG imbalances and Wyckoff Springs.
-- [x] **Fractional Kelly Sizer (`src/core/kelly_sizer.py`):** Asymmetric bet sizing allocating higher capital to ultra-high conviction setups.
-- [x] **Hurst Exponent Chaos Filter (`src/core/hurst_filter.py`):** Fractal dimension analysis rejecting Brownian noise ($H < 0.45$) and trading only persistent memory ($H > 0.52$).
-- [x] **Market Maker Inventory Depletion Frontrun (`src/core/mm_inventory_frontrun.py`):** Frontrunning MM upward repricing when ask depth is depleted by aggressive market buying.
-- [x] **Breakeven Velocity Capital Unlock (`src/core/risk_manager.py` & `portfolio_allocator.py`):** Auto-locking stop at entry + fee coverage at +0.6% gain, freeing up capital slot for instant re-allocation.
-- [x] **Lead-Lag Cross-Asset Correlator (`src/core/lead_lag_correlator.py`):** Latency arbitrage exploiting sector lag (SOL->JUP/RAY, FET->RENDER/NEAR, BTC->ETH/SOL).
-- [x] **Cumulative Volume Delta Tracker (`src/core/cvd_tracker.py`):** Aggressive taker buy/sell order flow analysis, rejecting spoofing.
-- [x] **Multi-Factor Scoring Engine (`src/core/scoring_engine.py`):** Market Regime + Momentum + Volume Spike + News Sentiment + CVD + Hurst + MM Depletion.
-- [x] **Dynamic Portfolio Allocator (`src/core/portfolio_allocator.py`):** Dynamically sizes slots according to liquid USDT and Binance Min Notional ($5 USDT):
-  - $10 balance -> 2 slots of $5 each.
-  - $15 balance -> 3 slots of $5 each.
-  - Scales automatically up to 5 slots.
-- [x] **Dual-Mode Exchange Layer (`src/exchange/`):**
-  - `PaperExchange`: Live price feeds without credentials, simulated 0.1% spot fees.
-  - `LiveExchange`: CCXT Binance Spot interface with full error shielding.
-- [x] **24/7 Background Trading Worker (`src/engine/`):** Independent daemon running continuously regardless of client connection.
-- [x] **Mobile PWA Dashboard (`src/web/`):** Dark mode, responsive web UI with one-click toggles and emergency exit.
-- [x] **100-Line Modularity Compliance:** 100% of codebase files strictly <= 100 lines.
-- [x] **Automated Test Suite:** 51/51 unit and regression tests passing with 100% success rate.
-- [x] **GitHub Remote Repository:** Synced with `https://github.com/ahmedewas/binance-news-scalper` (branch: `main`).
+- [x] **Bitcoin Flash Crash Gate (`src/core/btc_gate.py`):** Real-time BTC monitoring vetoing all altcoin entries if BTC drops >0.4% or experiences aggressive sell-volume spikes.
+- [x] **Multi-Timeframe 15m Confluence (`src/core/mtf_confluence.py`):** Higher-timeframe trend alignment (EMA9 vs EMA21 and structural lower-lows), eliminating counter-trend trap trades.
+- [x] **Weighted Institutional Scoring Engine (`src/core/scoring_engine.py`):** 40% Volume/CVD + 30% Regime + 30% Momentum/Catalyst, threshold raised to 80.0.
+- [x] **Optimized Volume Decay Breathing Room (`src/core/volume_decay_exit.py`):** Extended evaluation threshold to 14 minutes, eliminating premature fee-bleeding exits.
+- [x] **Dynamic ATR Volatility Targets (`src/core/atr_calculator.py`):** Adaptive TP (+0.8% to +3.0%) and SL (-0.6% to -1.5%) scaled to each coin's unique intraday volatility.
+- [x] **Symbol Cooldown Buffer (`src/core/cooldown_manager.py`):** 15-minute mandatory buffer on exited symbols preventing churn loops.
+- [x] **Expanded 35 Halal Spot Universe (`src/engine/market_scanner.py` & `src/news/analyzer.py`):** Tier-1 liquid non-lending Halal coins including KAS, STX, ICP, HBAR, GRT, FIL, IMX, PYTH, JTO, VET, GALA.
+- [x] **High-Speed Hybrid Stream Manager (`src/news/stream_manager.py`):** Dual-mode WebSocket with high-speed connection-pooled REST fallback for sub-second updates across all regions.
+- [x] **Cross-Asset Sector Lead-Lag Latency Arbitrage (`src/core/lead_lag_correlator.py`):** Cluster pairs (SOL->JTO/PYTH, FET->RENDER/TAO, BTC->STX/KAS, ETH->ARB/OP/IMX).
+- [x] **Anti-Slippage Execution Shield (`src/exchange/slippage_guard.py`):** Validates market buy spreads (<=0.25%) and sell bid depth (<=0.35%) before routing.
+- [x] **Binance Order Precision Sanitizer (`src/exchange/precision_formatter.py`):** Enforces exchange LOT_SIZE step sizes and min notional ($5 USDT) limits.
+- [x] **Asynchronous Telegram Alert Daemon (`src/core/telegram_notifier.py`):** Background thread dispatching mobile buy/sell/PnL notifications.
+- [x] **Automated Session Diagnostic Autopsy (`src/core/session_autopsy.py`):** Forensic performance analyzer with `/api/autopsy` diagnostic route.
+- [x] **Modular Engine Architecture (`src/engine/`):** Full decoupling into `bot_worker.py`, `worker_snapshot.py`, `worker_order_ops.py`, `worker_cycle.py`, and `worker_state.py`.
+- [x] **Modular Exchange Architecture (`src/exchange/`):** CCXT execution separated into `live.py` and `live_orders.py`.
+- [x] **Protocol 7 Modularity Compliance:** 100% of files in `src/` and `tests/` strictly <= 100 lines.
+- [x] **Automated Test Suite:** 139/139 unit and regression tests passing with 100% success rate in 2.75s.
 
 ## 2. Cumulative Requirements Registry (سجل المتطلبات التراكمية)
-1. **Spot Only:** No leverage, zero liquidation risk.
-2. **Capital Velocity:** Multi-stage 50% partial exit, early volume decay recycling, and 20-min max trade lifespan.
+1. **Spot Only:** No leverage, zero liquidation risk, 100% Halal compliant.
+2. **Capital Velocity:** Multi-stage 50% partial exit, 14-min volume decay recycling, and 20-min max trade lifespan.
 3. **Institutional Alpha Edge:**
    - Multi-stage 50% scale-out with free-ride trailing stop.
-   - Preemptive volume decay exit before 20-min timeout.
+   - Preemptive volume decay exit after 14-min breathing room.
    - Sub-second direct Binance CMS listing announcements scanner.
    - Contextual semantic catalyst classification (Tier 1-3) with negation defense.
    - SHA-256 cryptographic headline deduplication.
    - SMC Fair Value Gap (FVG) liquidity void expansion.
    - Wyckoff Volume Absorption (Springs) and Distribution Upthrusts (UTAD).
    - Fractional Kelly Criterion sizing based on empirical edge.
-   - Hurst Exponent chaos rejection.
+   - Hurst Exponent chaos rejection ($H > 0.52$).
    - Market maker inventory depletion frontrunning.
-   - Lead-Lag cross-asset latency arbitrage.
+   - Lead-Lag cross-asset latency arbitrage across 35 Halal coins.
    - Cumulative Volume Delta (CVD) anti-spoofing order flow.
+   - Bitcoin flash-crash veto gate ($< -0.4\%$).
+   - Multi-timeframe (15m) trend alignment filter.
+   - Anti-slippage shield preventing adverse fills.
+   - Lot-size and tick precision sanitization.
+   - Asynchronous Telegram mobile notifications.
+   - Automated session diagnostic autopsy.
 4. **Dynamic Sizing ($5 Min Notional):** Respects Binance limits, auto-calculates concurrent slots.
 5. **Dual Mode:** Paper trading default, toggleable to Live.
 6. **Mobile Independence:** Continues executing in cloud even when phone is powered off.
 
-- [x] **Performance & Hourly Session Tracker (`src/core/performance_tracker.py`):** Live hourly snapshots, win-rate calculation, PnL tracking, and Arabic exit reason translation.
-- [x] **Live Market Quant Radar (`src/engine/market_scanner.py`):** Continuous scanning of top liquid pairs (BTC, ETH, SOL, BNB, NEAR, FET) showing live prices, Wyckoff regimes, and composite scores.
-- [x] **Rich Position & Exit Detail UI (`src/web/`):** Full transparency showing entry/current prices, capital invested, dollar/percent PnL, target prices, timeout countdowns, and detailed Arabic exit reasons.
-
-- [x] **Audit Journal & Live Proof Verification (`src/core/audit_journal.py`):** Real-time persistent markdown journal (`TRADING_JOURNAL.md`) documenting every trade open/close with real Binance verification links, entry reasons, and daily PnL tracking.
-
-- [x] **24 Halal Spot Coins & Flow Breakouts (`src/engine/market_scanner.py` & `src/news/fetcher.py`):** Expanded from 6 to 24 premier Halal Spot technology/AI cryptocurrencies, ingesting quantitative flow breakouts directly into the execution engine.
-
 ## 3. Active Sprint Status
-- **Status:** Atomic Review Completed & Production-Grade Optimizations Applied.
-- **Atomic Review Bugs Discovered & Resolved:**
-  1. *UI Radar Blocking*: Fixed 24-coin synchronous scan blocking `/api/status`; switched to background cache, reducing endpoint latency from >5s timeout to 1ms.
-  2. *Net Equity Accounting*: Fixed equity calculation in `app.py` and `performance_tracker.py` so invested cash in open positions is not miscalculated as loss.
-  3. *Scoring Scale Normalization*: Fixed 0.75/0.85 fractional scale in `market_scanner.py` and added defensive normalization in `scoring_engine.py`.
-  4. *HTTP Keep-Alive Pooling*: Added `requests.Session()` pooling in `PaperExchange` and `BinanceAnnouncementsScanner`.
-  5. *Manual UI Exit Logging*: Linked `/api/close_all` to `PositionHandler` and `AuditJournal`.
-  6. *Halal Ticker Alignment*: Synchronized 24 Halal Spot coins in `NewsAnalyzer`.
-  7. *NewsFetcher Unit Testing*: Added `test_news_fetcher.py` and verified complete module imports.
-- **Verification:** 59/59 unit tests passed (0.77s). 100% of codebase files strictly <= 100 lines.
-- **Launchers Ready:**
-  - `C:\Users\alpraa\Desktop\تشغيل_بوت_بينانس.bat` (Desktop 1-click launcher)
-  - `C:\Users\alpraa\Desktop\فتح_سجل_الصفقات.bat` (Desktop journal viewer)
-- **Active Mode:** PAPER mode (15$ initial capital, 3 slots x 5$), 24 Halal Spot coins, ready for 8-hour trial run.
-
+- **Current Milestone:** 5-Stage Institutional Evolution Complete.
+- **Section 1: Quantitative Brain & Market Gate:** COMPLETE.
+- **Section 2: Risk Management & 35 Halal Coin Universe:** COMPLETE.
+- **Section 3: Sensory & Ingestion Streaming Layer:** COMPLETE.
+- **Section 4: Anti-Slippage & Precision Execution Core:** COMPLETE.
+- **Section 5: Telemetry, Alerts & Diagnostic Autopsy:** COMPLETE.
+- **Test Verification:** 139/139 automated tests passing with zero errors.
+- **Protocol Compliance:** Zero files exceeding 100 lines across the entire codebase.

@@ -10,9 +10,10 @@ class AuditJournal:
         self._ensure_header()
 
     def _ensure_header(self) -> None:
+        os.makedirs(os.path.dirname(os.path.abspath(self.file_path)), exist_ok=True)
         if not os.path.exists(self.file_path):
             with open(self.file_path, "w", encoding="utf-8") as f:
-                f.write("# 📋 سجل التدقيق والصفقات الحية (Binance Live Audit Journal)\n\n")
+                f.write("# سجل التدقيق وتنفيذ الصفقات — راجع وضع PAPER/LIVE في لوحة التحكم\n\n")
                 f.write("> هذا الملف يوثق لحظياً كل صفقة وبياناتها الحية المقروءة من بينانس للتحقق.\n\n---\n")
 
     def log_trade_opened(self, p: Dict[str, Any], reason: str, score: float, regime: str) -> None:
@@ -22,13 +23,13 @@ class AuditJournal:
         entry = (
             f"\n### 🟢 فتح صفقة جديدة: `{p['symbol']}` (خانة {p.get('slot_id', 1)})\n"
             f"- **التوقيت:** `{now_str}`\n"
-            f"- **سعر الدخول الحقيقي من بينانس:** `${p['entry_price']}`\n"
+            f"- **سعر الدخول المسجل:** `${p['entry_price']}`\n"
             f"- **رأس المال المخصص:** `${p.get('cost_basis', 5.0)}` USDT\n"
             f"- **رابط التحقق المباشر من بينانس:** [فتح شارت العملة على بينانس]({binance_url})\n"
             f"- **أسباب وتفاصيل الدخول:**\n"
             f"  - **الخبر / المحفز:** {reason}\n"
             f"  - **مرحلة السوق (Wyckoff):** `{regime}`\n"
-            f"  - **التقييم المؤسسي الكلي:** `{score:.1f}/100` (تجاوز حاجز الـ 75 نقطة المطلوب)\n"
+            f"  - **درجة الإشارة (ليست احتمال نجاح):** `{score:.1f}/100`\n"
             f"- **الهدف الأولي (+1.2%):** `${p.get('target_tp', 0)}` | **الوقف الأولي (-0.9%):** `${p.get('stop_loss', 0)}`\n"
             f"---\n"
         )

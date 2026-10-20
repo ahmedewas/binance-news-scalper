@@ -1,69 +1,10 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Binance Scalper | لوحة تحكم التداول المؤسسي والتدقيق</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-    <div class="header">
-        <div class="title">⚡ Binance News Scalper</div>
-        <div style="display:flex; gap:6px; align-items:center;">
-            <span id="lat-badge" class="badge" style="background:#334155; color:#38bdf8;">-- ms</span>
-            <span id="mode-badge" class="badge badge-paper">PAPER</span>
-            <span id="status-badge" class="badge badge-active">نشط</span>
-            <button id="sound-btn" onclick="toggleAudio()" style="padding:2px 6px; font-size:0.75rem; background:#1e293b; border:1px solid #334155; color:#f8fafc; border-radius:6px; cursor:pointer;">🔔</button>
-        </div>
-    </div>
-
-    <div class="grid">
-        <div class="card">
-            <div class="card-title">الرصيد المتاح (USDT)</div>
-            <div id="bal" class="card-val" style="color:#38bdf8;">$0.00</div>
-        </div>
-        <div class="card">
-            <div class="card-title">الربح / الخسارة اليومية (Daily PnL)</div>
-            <div id="pnl" class="card-val">0.0%</div>
-        </div>
-        <div class="card">
-            <div class="card-title">نسبة النجاح (Win Rate)</div>
-            <div id="win-rate" class="card-val" style="color:#34d399;">0%</div>
-        </div>
-        <div class="card">
-            <div class="card-title">مدة الجلسة الحالية</div>
-            <div id="session-time" class="card-val" style="color:#f59e0b;">0h 0m</div>
-        </div>
-    </div>
-
-    <div class="card" style="margin-bottom:14px;">
-        <div class="card-title">خانات التداول السريع (Slots)</div>
-        <div id="slots" style="font-size:0.9rem; font-weight:bold; color:#f8fafc;">0/3</div>
-    </div>
-
-    <div class="btn-group">
-        <button class="btn-toggle" onclick="toggleBot()">إيقاف / تشغيل البوت</button>
-        <button class="btn-danger" onclick="emergencyClose()">🚨 خروج طوارئ وإغلاق الكل</button>
-    </div>
-
-    <div class="section-title">📊 الصفقات المفتوحة حالياً (Active Positions)</div>
-    <div id="pos-box"><div class="empty-text">لا توجد صفقات مفتوحة حالياً</div></div>
-
-    <div class="section-title">🕒 تقرير الأداء كل ساعة (Hourly Session Tracker)</div>
-    <div id="hourly-box"><div class="empty-text">سيظهر التقرير مع اكتمال الساعة الأولى</div></div>
-
-    <div class="section-title">📜 سجل الصفقات المغلقة وأسباب الخروج والربح/الخسارة</div>
-    <div id="hist-box"><div class="empty-text">لا توجد صفقات منتهية بعد</div></div>
-
-    <div class="section-title">📡 رادار مراقبة السوق اللحظي (Live Quant Radar)</div>
-    <div id="radar-box"><div class="empty-text">جاري فحص مؤشرات السوق...</div></div>
-
-    <div class="section-title" style="margin-top:18px;">
-        <span>📋 سجل التدقيق اليومي المباشر (Audit Journal)</span>
-        <button onclick="fetchJournal()" style="flex:none; padding:4px 8px; font-size:0.75rem; background:#0284c7; color:white;">تحديث السجل 🔄</button>
-    </div>
-    <div id="journal-box" class="item-box" style="white-space:pre-wrap; font-family:monospace; font-size:0.72rem; max-height:220px; overflow-y:auto; line-height:1.4;">جاري جلب السجل...</div>
-
-    <script src="/static/dashboard.js"></script>
-</body>
-</html>
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>مرصد التداول</title><link rel="stylesheet" href="/static/style.css"></head><body><main>
+<header><div><small>BINANCE NEWS SCALPER</small><h1>مرصد التداول <span class="positive">●</span></h1><p>السوق، الصفقات والمخاطر في مكان واحد</p></div><div class="actions"><span id="mode-badge" class="badge">—</span><span id="status-badge" class="badge">بانتظار الاتصال</span><button id="sound-btn" aria-pressed="false">الصوت: مغلق</button></div></header>
+<div class="notice">التداول الورقي محاكاة؛ النتائج لا تمثل عائداً مضموناً أو تنفيذ أوامر حقيقية.</div>
+<section class="panel controls"><div><strong id="connection-state" role="status">جاري الاتصال…</strong><p id="updated-at">لم تصل بيانات بعد</p></div><form id="connect-form"><label for="token">رمز اتصال اللوحة</label><input id="token" type="password" autocomplete="off" placeholder="عند تفعيل الحماية"><button>اتصال</button></form><button id="refresh-btn">تحديث الآن</button></section><div id="alert" class="alert" role="alert" hidden></div>
+<section class="metrics"><article class="panel"><h2>الرصيد المتاح</h2><strong id="bal">—</strong><small>USDT</small></article><article class="panel"><h2>قيمة محفظة البوت</h2><strong id="equity">—</strong><small>النقد + قيمة الصفقات</small></article><article class="panel"><h2>صافي نتيجة الجلسة</h2><strong id="pnl">—</strong><small id="win-rate">—</small></article><article class="panel"><h2>مدة الجلسة</h2><strong id="session-time">—</strong><small id="slots">—</small></article></section>
+<section class="panel controls"><div><h2>التحكم في الدخول</h2><p>إيقاف الدخول يبقي حماية الصفقات المفتوحة فعالة.</p></div><div class="actions"><button id="pause-btn" data-mutation disabled>إيقاف الدخول</button><button id="resume-btn" class="primary" data-mutation disabled>استئناف الدخول</button><button id="emergency-btn" class="danger" data-mutation disabled>إغلاق الكل وإيقاف الدخول</button></div></section>
+<div class="workspace"><section class="panel"><div class="section-head"><h2>الصفقات المفتوحة</h2><span id="position-count" class="badge">—</span></div><div id="pos-box" class="stack"></div><p id="pending"></p><button id="reconcile-btn" data-mutation disabled>مطابقة الأوامر غير المحسومة</button></section><section class="panel"><div class="section-head"><h2>صحة المحرك</h2><span id="lat-badge" class="badge">—</span></div><dl id="health-box"></dl><hr><h2>إعدادات التشغيل</h2><button id="reset-btn" data-mutation disabled>جلسة ورقية جديدة</button><dl id="settings-box"></dl></section></div>
+<section class="panel"><div class="section-head"><h2>رادار السوق</h2><span id="radar-count"></span></div><div class="filters"><label>بحث العملة<input id="radar-search" type="search" placeholder="BTCUSDT" dir="ltr"></label><label>الحالة<select id="radar-filter"><option value="all">كل العملات</option><option value="approved">المؤهلة فقط</option><option value="waiting">غير المؤهلة</option></select></label><label>ترتيب<select id="radar-sort"><option value="score">التقييم: الأعلى أولاً</option><option value="symbol">اسم العملة</option><option value="price">السعر: الأعلى أولاً</option></select></label></div><div id="radar-box" class="table-wrap"></div></section>
+<div class="workspace"><section class="panel"><h2>آخر الأخبار وقرارات الدخول</h2><div id="news-box" class="stack scroll-area"></div></section><section class="panel"><h2>الأداء كل ساعة</h2><div id="hourly-box" class="table-wrap"></div></section></div>
+<section class="panel"><div class="section-head"><h2>الصفقات المغلقة</h2><button id="csv-btn">تصدير CSV</button></div><div id="hist-box" class="table-wrap"></div></section><section class="panel"><div class="section-head"><h2>سجل التدقيق</h2><div class="actions"><button id="journal-refresh">تحديث السجل</button><button id="journal-download">تنزيل السجل</button></div></div><p id="journal-state" role="status"></p><pre id="journal-box">لم يتم تحميل السجل بعد.</pre></section><footer>Binance News Scalper · لوحة مراقبة الجلسة · جميع القيم بالدولار الرقمي USDT</footer></main><script src="/static/dashboard.js" defer></script></body></html>

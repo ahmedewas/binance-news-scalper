@@ -40,8 +40,6 @@ class RiskManager:
 
         # Check Multi-Stage 50% Partial Take-Profit at +1.2%
         if not position.partial_tp_done and current_price >= position.entry_price * (1.0 + self.stage1_tp_pct):
-            position.partial_tp_done = True
-            position.is_breakeven_locked = True
             pnl = (current_price - position.entry_price) / position.entry_price
             return True, f"PARTIAL_TP_50 (Secured 50% gain: +{pnl*100:.2f}%)", 0.5
 

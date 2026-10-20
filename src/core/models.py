@@ -47,6 +47,8 @@ class Position:
     is_breakeven_locked: bool = False
     partial_tp_done: bool = False
     entry_volume: float = 0.0
+    cost_basis: float = 0.0
+    execution_uncertain: bool = False
 
 
 @dataclass
@@ -59,3 +61,7 @@ class OrderResult:
     side: str
     status: str
     message: str = ""
+    cost: float = 0.0
+    fee_quote: float = 0.0
+    fee_base: float = 0.0
+    client_order_id: str = ""

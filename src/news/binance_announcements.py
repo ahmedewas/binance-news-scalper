@@ -29,10 +29,11 @@ class BinanceAnnouncementsScanner:
             r = self.session.get(BINANCE_CMS_URL, timeout=self.timeout)
             if r.status_code == 200:
                 data = r.json()
-                articles = (
-                    data.get("data", {})
-                    .get("articles", [])
-                )
+                payload = data.get("data") or {}
+                articles = payload.get("articles", [])
+                if not articles:
+                    articles = [a for catalog in payload.get("catalogs", [])
+                                for a in catalog.get("articles", [])]
                 return [
                     {
                         "id": str(a.get("id")),

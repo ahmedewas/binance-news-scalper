@@ -3,10 +3,11 @@ from typing import Dict, List, Optional, Tuple
 
 
 SECTOR_ECOSYSTEMS: Dict[str, List[str]] = {
-    "SOL/USDT": ["JUP/USDT", "RAY/USDT"],
-    "FET/USDT": ["RENDER/USDT", "NEAR/USDT"],
-    "BTC/USDT": ["ETH/USDT", "SOL/USDT"],
-    "AVAX/USDT": ["JOE/USDT", "QI/USDT"],
+    "SOL/USDT": ["JTO/USDT", "PYTH/USDT", "JUP/USDT"],
+    "FET/USDT": ["RENDER/USDT", "TAO/USDT", "NEAR/USDT"],
+    "BTC/USDT": ["STX/USDT", "KAS/USDT", "ETH/USDT"],
+    "ETH/USDT": ["ARB/USDT", "OP/USDT", "IMX/USDT"],
+    "DOT/USDT": ["ATOM/USDT"],
 }
 
 

@@ -28,7 +28,7 @@ def test_partial_take_profit_50_pct():
     should_exit, reason, ratio = risk.evaluate_exit(pos, current_price=101.3)
     assert should_exit
     assert ratio == 0.5  # Sells 50%
-    assert pos.partial_tp_done
+    assert not pos.partial_tp_done  # Commit only after an execution fill
     assert pos.is_breakeven_locked
     assert "PARTIAL_TP_50" in reason
 

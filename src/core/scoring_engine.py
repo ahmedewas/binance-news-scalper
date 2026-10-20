@@ -4,7 +4,7 @@ from src.core.models import MarketPhase, ScoringResult
 
 
 class ScoringEngine:
-    def __init__(self, min_score: float = 75.0):
+    def __init__(self, min_score: float = 80.0):
         self.min_score = min_score
 
     def evaluate(
@@ -21,6 +21,13 @@ class ScoringEngine:
         """Computes weighted probability score and approves or rejects trade."""
         if 0.0 < news_sentiment <= 1.0:
             news_sentiment = news_sentiment * 100.0
+
+        if len(klines) < 30 or any(float(k.get("close", 0)) <= 0 for k in klines):
+            return ScoringResult(symbol, phase, phase_score, 0, 0, news_sentiment,
+                                 0, False, "Insufficient or invalid closed candles")
+        if news_sentiment <= 10:
+            return ScoringResult(symbol, phase, phase_score, 0, 0, news_sentiment,
+                                 0, False, "Negative or unconfirmed news: entry blocked")
 
         if phase in (MarketPhase.DISTRIBUTION, MarketPhase.MARKDOWN):
             return ScoringResult(
@@ -55,16 +62,15 @@ class ScoringEngine:
         ret = (closes[-1] - closes[0]) / closes[0] if closes[0] > 0 else 0.0
         momentum_score = min(100.0, max(0.0, 50.0 + ret * 1000.0))
 
-        # Dynamic Multi-Factor Weighting
-        scores = [phase_score, momentum_score, volume_score, news_sentiment]
-        if cvd_score is not None:
-            scores.append(cvd_score)
-        if hurst_score is not None:
-            scores.append(hurst_score)
-        if mm_depletion_score is not None:
-            scores.append(mm_depletion_score)
+        # 40% Volume & Order Flow + 30% Market Regime + 30% Momentum & Catalyst
+        vol_comp = (volume_score * 0.5 + cvd_score * 0.5) if cvd_score is not None else volume_score
+        mom_cat = momentum_score * 0.5 + news_sentiment * 0.5
+        weighted = vol_comp * 0.40 + phase_score * 0.30 + mom_cat * 0.30
 
-        total = round(sum(scores) / len(scores), 2)
+        if hurst_score is not None and mm_depletion_score is not None:
+            weighted = weighted * 0.85 + (hurst_score * 0.075 + mm_depletion_score * 0.075)
+
+        total = round(min(100.0, max(0.0, weighted)), 2)
         approved = total >= self.min_score
         reason = None if approved else f"Score {total} < Threshold {self.min_score}"
 

@@ -1,4 +1,5 @@
 """Unit tests for NewsFetcher throttling and dedup integration."""
+import time
 from unittest.mock import MagicMock, patch
 from src.news.fetcher import NewsFetcher
 from src.news.analyzer import NewsAnalyzer
@@ -18,7 +19,7 @@ def test_news_fetcher_with_mocked_sources(mock_get):
     analyzer = NewsAnalyzer()
     mock_scanner = MagicMock()
     mock_scanner.fetch_announcements.return_value = [
-        {"id": 123, "title": "Binance Will List Arbitrum (ARB) with Seed Tag"}
+        {"id": 123, "releaseDate": int(time.time() * 1000), "title": "Binance Will List Arbitrum (ARB) with Seed Tag"}
     ]
     mock_scanner.extract_listing_ticker.return_value = "ARB/USDT"
     mock_market = MagicMock()

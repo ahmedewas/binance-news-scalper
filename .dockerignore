@@ -1,0 +1,10 @@
+.env
+.env.*
+.git
+.backups
+data
+__pycache__
+**/__pycache__
+.pytest_cache
+TRADING_JOURNAL.md
+tests

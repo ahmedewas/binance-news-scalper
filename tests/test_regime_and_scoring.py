@@ -22,7 +22,7 @@ def test_markdown_phase_detection():
 
 def test_bull_trap_rejection_in_bearish_regime():
     engine = ScoringEngine(min_score=75.0)
-    klines = [{"close": 10.0, "volume": 1000} for _ in range(20)]
+    klines = [{"close": 10.0, "volume": 1000} for _ in range(40)]
     result = engine.evaluate(
         symbol="SOL/USDT",
         phase=MarketPhase.MARKDOWN,
@@ -36,7 +36,7 @@ def test_bull_trap_rejection_in_bearish_regime():
 
 def test_high_conviction_entry_approval():
     engine = ScoringEngine(min_score=75.0)
-    klines = [{"close": 10.0 + i * 0.1, "volume": 100} for i in range(20)]
+    klines = [{"close": 10.0 + i * 0.1, "volume": 100} for i in range(40)]
     # Create volume surge on latest candle
     klines[-1]["volume"] = 5000.0
     result = engine.evaluate(
@@ -48,3 +48,19 @@ def test_high_conviction_entry_approval():
     )
     assert result.is_approved
     assert result.total_score >= 75.0
+
+
+def test_weighted_scoring_80_threshold():
+    engine = ScoringEngine(min_score=80.0)
+    klines = [{"close": 10.0 + i * 0.1, "volume": 100} for i in range(40)]
+    klines[-1]["volume"] = 6000.0
+    result = engine.evaluate(
+        symbol="BTC/USDT",
+        phase=MarketPhase.MARKUP,
+        phase_score=90.0,
+        klines=klines,
+        news_sentiment=95.0,
+        cvd_score=85.0,
+    )
+    assert result.is_approved
+    assert result.total_score >= 80.0

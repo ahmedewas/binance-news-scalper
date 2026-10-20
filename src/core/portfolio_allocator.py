@@ -29,8 +29,8 @@ class PortfolioAllocator:
 
         calculated_slots = math.floor(tradable_equity / self.min_notional)
         total_slots = min(self.max_slots, max(1, calculated_slots))
-        slot_size = round(max(self.min_notional, tradable_equity / total_slots), 2)
-        can_trade = usdt_balance >= (self.min_notional - 0.01)
+        slot_size = math.floor(min(usdt_balance, tradable_equity / total_slots) * 100) / 100
+        can_trade = slot_size >= self.min_notional
 
         return {
             "total_slots": total_slots, "slot_size": slot_size,
@@ -47,11 +47,5 @@ class PortfolioAllocator:
         for slot_id in range(1, total_slots + 1):
             if slot_id not in active_slot_ids:
                 return slot_id
-
-        # Velocity Unlock: If an active slot has zero risk (breakeven locked)
-        if breakeven_locked_ids:
-            for locked_id in breakeven_locked_ids:
-                if locked_id in active_slot_ids:
-                    return locked_id + 100  # Virtual unlocked velocity slot
 
         return -1

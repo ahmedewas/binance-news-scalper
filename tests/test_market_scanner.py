@@ -7,7 +7,7 @@ from src.core.models import MarketPhase, ScoringResult
 def test_market_scanner():
     exchange = MagicMock()
     exchange.get_ticker_price.return_value = 65000.0
-    exchange.get_historical_klines.return_value = [{"open": 1, "high": 2, "low": 0.5, "close": 1.5, "volume": 100}]
+    exchange.get_historical_klines.return_value = [{"open": 1, "high": 2, "low": 0.5, "close": 1.5, "volume": 100} for _ in range(40)]
 
     regime = MagicMock()
     regime.detect_phase.return_value = (MarketPhase.ACCUMULATION, 80.0)

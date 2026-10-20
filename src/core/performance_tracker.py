@@ -26,7 +26,7 @@ class PerformanceTracker:
             self._last_snapshot_hour = elapsed_hours
             hour_trades = [
                 t for t in self.trades
-                if (t["timestamp"] - self.start_time).total_seconds() <= elapsed_hours * 3600
+                if (elapsed_hours - 1) * 3600 <= (t["timestamp"] - self.start_time).total_seconds() < elapsed_hours * 3600
             ]
             hour_pnl = sum(t["pnl_usd"] for t in hour_trades)
             self.hourly_snapshots.append({

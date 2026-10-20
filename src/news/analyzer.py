@@ -6,7 +6,9 @@ from src.news.semantic_scorer import SemanticScorer
 POPULAR_TICKERS = {
     "BTC", "ETH", "SOL", "BNB", "XRP", "ADA", "AVAX", "SUI",
     "LINK", "NEAR", "FET", "APT", "DOT", "RENDER", "TAO", "TIA",
-    "SEI", "INJ", "ATOM", "OP", "ARB", "ALGO", "POL", "FTM"
+    "SEI", "INJ", "ATOM", "OP", "ARB", "ALGO", "POL", "FTM",
+    "KAS", "STX", "ICP", "HBAR", "GRT", "FIL", "IMX", "PYTH",
+    "JTO", "VET", "GALA"
 }
 
 
@@ -16,7 +18,12 @@ class NewsAnalyzer:
 
     def extract_symbol(self, text: str) -> Optional[str]:
         """Extracts crypto ticker symbol from headline/text."""
-        tokens = re.findall(r"\b[A-Z]{2,10}\b", text.upper())
+        # Preserve case: ordinary words such as 'near' and 'link' are not tickers.
+        names = {"bitcoin": "BTC", "ethereum": "ETH", "solana": "SOL", "arbitrum": "ARB"}
+        for name, ticker in names.items():
+            if re.search(r"\b" + name + r"\b", text, re.I):
+                return f"{ticker}/USDT"
+        tokens = re.findall(r"\b[A-Z]{2,10}\b", text)
         for token in tokens:
             if token in POPULAR_TICKERS:
                 return f"{token}/USDT"

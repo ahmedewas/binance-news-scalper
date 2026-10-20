@@ -12,6 +12,8 @@ WATCHLIST = [
     "AVAX/USDT", "SUI/USDT", "LINK/USDT", "NEAR/USDT", "FET/USDT", "APT/USDT",
     "DOT/USDT", "RENDER/USDT", "TAO/USDT", "TIA/USDT", "SEI/USDT", "INJ/USDT",
     "ATOM/USDT", "OP/USDT", "ARB/USDT", "ALGO/USDT", "POL/USDT", "FTM/USDT",
+    "KAS/USDT", "STX/USDT", "ICP/USDT", "HBAR/USDT", "GRT/USDT", "FIL/USDT",
+    "IMX/USDT", "PYTH/USDT", "JTO/USDT", "VET/USDT", "GALA/USDT",
 ]
 
 
@@ -27,6 +29,7 @@ class MarketScanner:
         self.scoring_engine = scoring_engine
         self._last_scan_time = 0.0
         self.cached_results: List[Dict[str, Any]] = []
+        self.last_completed_at = None
 
     def scan_if_needed(self, interval_seconds: float = 15.0) -> List[Dict[str, Any]]:
         now = time.time()
@@ -38,18 +41,25 @@ class MarketScanner:
         for sym in WATCHLIST:
             try:
                 price = self.exchange.get_ticker_price(sym)
-                klines = self.exchange.get_historical_klines(sym, "1m", 25)
+                klines = self.exchange.get_historical_klines(sym, "1m", 40)
+                stale = bool(klines and klines[-1].get("close_time") and
+                             time.time()*1000-klines[-1]["close_time"] > 180000)
+                if price <= 0 or len(klines) < 30 or stale:
+                    results.append({"symbol": sym, "price": None, "phase": "UNAVAILABLE",
+                                    "score": 0, "approved": False, "status": "بيانات غير متاحة"})
+                    continue
                 phase, phase_score = self.regime_detector.detect_phase(klines)
                 score_res = self.scoring_engine.evaluate(sym, phase, phase_score, klines, 75.0)
                 results.append({
                     "symbol": sym, "price": price, "phase": phase.value,
                     "score": score_res.total_score, "approved": score_res.is_approved,
-                    "status": "APPROVED 🚀" if score_res.is_approved else f"Score {score_res.total_score}/100 (<75)",
+                    "status": "مؤهل للفحص" if score_res.is_approved else score_res.rejection_reason,
                 })
             except Exception:
                 continue
 
         self.cached_results = results
+        self.last_completed_at = datetime.now(timezone.utc).isoformat()
         return results
 
     def find_breakouts(self) -> List[NewsItem]:

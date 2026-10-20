@@ -5,7 +5,7 @@ from src.core.volume_decay_exit import VolumeDecayExitDetector
 def test_volume_decay_exit_trigger():
     detector = VolumeDecayExitDetector(min_retention_ratio=0.25, min_elapsed_minutes=3.0)
     # Entry volume = 1000.0, current volume collapsed to 150.0 (15% retention), elapsed = 4 mins, stagnant PnL
-    klines = [{"volume": 150.0}]
+    klines = [{"volume": 150.0} for _ in range(3)]
     should_exit, reason = detector.check_volume_decay(
         entry_volume=1000.0,
         recent_klines=klines,
@@ -19,7 +19,7 @@ def test_volume_decay_exit_trigger():
 def test_volume_healthy_retention_hold():
     detector = VolumeDecayExitDetector(min_retention_ratio=0.25, min_elapsed_minutes=3.0)
     # Entry volume = 1000.0, current volume = 800.0 (80% retention)
-    klines = [{"volume": 800.0}]
+    klines = [{"volume": 800.0} for _ in range(3)]
     should_exit, reason = detector.check_volume_decay(
         entry_volume=1000.0,
         recent_klines=klines,
