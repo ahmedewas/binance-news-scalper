@@ -22,15 +22,15 @@ class AppConfig:
     )
     stop_loss_pct: float = float(os.getenv("STOP_LOSS_PCT", "0.009"))
     timeout_minutes: int = int(os.getenv("TIMEOUT_MINUTES", "20"))
-    min_score: float = float(os.getenv("MIN_PROBABILITY_SCORE", "75.0"))
+    min_score: float = float(os.getenv("MIN_PROBABILITY_SCORE", "70.0"))
     port: int = int(os.getenv("PORT", "8080"))
     host: str = os.getenv("HOST", "127.0.0.1")
     dashboard_token: str = os.getenv("DASHBOARD_TOKEN", "")
     state_dir: str = os.getenv("STATE_DIR", "data")
     max_news_age_seconds: int = int(os.getenv("MAX_NEWS_AGE_SECONDS", "900"))
     max_session_loss_pct: float = float(os.getenv("MAX_SESSION_LOSS_PCT", "0.03"))
-    enable_flow_entries: bool = os.getenv("ENABLE_FLOW_ENTRIES", "false").lower() == "true"
-    enable_volume_decay_exit: bool = os.getenv("ENABLE_VOLUME_DECAY_EXIT", "false").lower() == "true"
+    enable_flow_entries: bool = os.getenv("ENABLE_FLOW_ENTRIES", "true").lower() == "true"
+    enable_volume_decay_exit: bool = os.getenv("ENABLE_VOLUME_DECAY_EXIT", "true").lower() == "true"
     symbol_cooldown_minutes: int = int(os.getenv("SYMBOL_COOLDOWN_MINUTES", "15"))
     max_entries_per_hour: int = int(os.getenv("MAX_ENTRIES_PER_HOUR", "6"))
 

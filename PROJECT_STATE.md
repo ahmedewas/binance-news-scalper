@@ -3,7 +3,7 @@
 ## 1. Locked Working Modules (قائمة الخطوط الحمراء)
 - [x] **Bitcoin Flash Crash Gate (`src/core/btc_gate.py`):** Real-time BTC monitoring vetoing all altcoin entries if BTC drops >0.4% or experiences aggressive sell-volume spikes.
 - [x] **Multi-Timeframe 15m Confluence (`src/core/mtf_confluence.py`):** Higher-timeframe trend alignment (EMA9 vs EMA21 and structural lower-lows), eliminating counter-trend trap trades.
-- [x] **Weighted Institutional Scoring Engine (`src/core/scoring_engine.py`):** 40% Volume/CVD + 30% Regime + 30% Momentum/Catalyst, threshold raised to 80.0.
+- [x] **Weighted Institutional Scoring Engine (`src/core/scoring_engine.py`):** 40% Volume/CVD + 30% Regime + 30% Momentum/Catalyst, threshold calibrated to 70.0.
 - [x] **Optimized Volume Decay Breathing Room (`src/core/volume_decay_exit.py`):** Extended evaluation threshold to 14 minutes, eliminating premature fee-bleeding exits.
 - [x] **Dynamic ATR Volatility Targets (`src/core/atr_calculator.py`):** Adaptive TP (+0.8% to +3.0%) and SL (-0.6% to -1.5%) scaled to each coin's unique intraday volatility.
 - [x] **Symbol Cooldown Buffer (`src/core/cooldown_manager.py`):** 15-minute mandatory buffer on exited symbols preventing churn loops.

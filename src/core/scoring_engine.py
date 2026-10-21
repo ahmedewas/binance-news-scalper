@@ -4,7 +4,7 @@ from src.core.models import MarketPhase, ScoringResult
 
 
 class ScoringEngine:
-    def __init__(self, min_score: float = 80.0):
+    def __init__(self, min_score: float = 70.0):
         self.min_score = min_score
 
     def evaluate(
