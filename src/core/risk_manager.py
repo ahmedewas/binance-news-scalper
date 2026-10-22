@@ -1,4 +1,4 @@
-"""Dynamic Triple-Exit risk manager: Trailing TP, Hard SL, and Timeout."""
+"""Dynamic Triple-Exit risk manager: Trailing TP, Ratchet Ladder, Hard SL, and Timeout."""
 from datetime import datetime, timezone
 from typing import Tuple, Optional
 from src.core.models import Position
@@ -29,13 +29,11 @@ class RiskManager:
         """Evaluates whether to close (or partially close) the position (exit_ratio: 0.5 or 1.0)."""
         now = now or datetime.now(timezone.utc)
         position.current_price = current_price
-
         if current_price > position.highest_price:
             position.highest_price = current_price
 
-        # Check Breakeven Lock (+0.6% gain locks entry + fees)
-        be_activation = position.entry_price * (1.0 + self.breakeven_trigger_pct)
-        if position.highest_price >= be_activation:
+        gain_high = (position.highest_price - position.entry_price) / position.entry_price
+        if gain_high >= self.breakeven_trigger_pct:
             position.is_breakeven_locked = True
 
         # Check Multi-Stage 50% Partial Take-Profit at +1.2%
@@ -43,25 +41,37 @@ class RiskManager:
             pnl = (current_price - position.entry_price) / position.entry_price
             return True, f"PARTIAL_TP_50 (Secured 50% gain: +{pnl*100:.2f}%)", 0.5
 
-        # 1. Stop-Loss Check (Breakeven or Hard SL)
-        if position.is_breakeven_locked:
-            be_price = position.entry_price * (1.0 + self.fee_coverage_pct)
-            if current_price <= be_price:
-                return True, "BREAKEVEN_EXIT (Locked profit with fees covered)", 1.0
-        else:
-            sl_price = position.entry_price * (1.0 - self.stop_loss_pct)
-            if current_price <= sl_price:
-                return True, f"STOP_LOSS (Price {current_price} <= SL {sl_price:.4f})", 1.0
+        # Ratcheted Ladder Stop Level calculation
+        locked_stop_pct = -self.stop_loss_pct
+        if gain_high >= 0.030:
+            locked_stop_pct = 0.024
+        elif gain_high >= 0.020:
+            locked_stop_pct = 0.015
+        elif gain_high >= self.stage1_tp_pct:
+            locked_stop_pct = 0.008
+        elif position.is_breakeven_locked:
+            locked_stop_pct = self.fee_coverage_pct
 
-        # 2. Trailing Take-Profit Check (For Remaining Position)
-        tp_activation = position.entry_price * (1.0 + self.trailing_tp_pct)
-        if position.highest_price >= tp_activation:
+        stop_price = position.entry_price * (1.0 + locked_stop_pct)
+
+        # Trailing Take-Profit for runners
+        if position.highest_price >= position.entry_price * (1.0 + self.trailing_tp_pct):
             trailing_stop = position.highest_price * (1.0 - self.trailing_offset_pct)
-            if current_price <= trailing_stop:
+            if trailing_stop > stop_price:
+                stop_price = trailing_stop
+
+        # Stop / Breakeven / Ratchet Execution
+        if current_price <= stop_price:
+            if position.is_breakeven_locked and stop_price > position.entry_price:
+                if locked_stop_pct == self.fee_coverage_pct:
+                    return True, "BREAKEVEN_EXIT (Locked profit with fees covered)", 1.0
+                return True, f"TRAILING_TP / RATCHET_LADDER_TP (Secured +{locked_stop_pct*100:.1f}%)", 1.0
+            if current_price <= position.highest_price * (1.0 - self.trailing_offset_pct) and position.highest_price >= position.entry_price * (1.0 + self.trailing_tp_pct):
                 pnl = (current_price - position.entry_price) / position.entry_price
                 return True, f"TRAILING_TP (PnL: +{pnl*100:.2f}%)", 1.0
+            return True, f"STOP_LOSS (Price {current_price:.4f} <= SL {stop_price:.4f})", 1.0
 
-        # 3. Time-Based Timeout Check
+        # Time-Based Timeout Check
         elapsed = (now - position.entry_time).total_seconds() / 60.0
         if elapsed >= self.timeout_minutes:
             return True, f"TIMEOUT_RECYCLE (Elapsed {elapsed:.1f}m >= {self.timeout_minutes}m)", 1.0
