@@ -21,6 +21,10 @@ class ResetRequest(BaseModel):
     confirmation: str
 
 
+class ModeRequest(BaseModel):
+    mode: str = Field(pattern='^(PAPER|LIVE)$')
+
+
 def create_app(worker, dashboard_token=None):
     app = FastAPI(title='Binance Scalper', docs_url=None, redoc_url=None, openapi_url=None)
     token = config.dashboard_token if dashboard_token is None else dashboard_token
@@ -61,6 +65,13 @@ def create_app(worker, dashboard_token=None):
     def active(payload: ActiveRequest):
         try:
             return worker.set_active(payload.active)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+    @app.post('/api/mode')
+    def set_mode(payload: ModeRequest):
+        try:
+            return worker.switch_mode(payload.mode)
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc
 

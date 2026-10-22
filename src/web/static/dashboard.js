@@ -31,6 +31,8 @@ function controls() {
     $('resume-btn').disabled = unavailable || !!state?.is_active || !!state?.health?.loss_limit_hit || pendingCount(state)>0;
     $('reconcile-btn').disabled = unavailable || !pendingCount(state);
     $('reset-btn').disabled = unavailable || state?.mode !== 'PAPER' || array(state?.open_positions).length>0 || pendingCount(state)>0;
+    if ($('mode-paper-btn')) $('mode-paper-btn').disabled = unavailable || state?.mode === 'PAPER' || array(state?.open_positions).length>0 || pendingCount(state)>0;
+    if ($('mode-live-btn')) $('mode-live-btn').disabled = unavailable || state?.mode === 'LIVE' || array(state?.open_positions).length>0 || pendingCount(state)>0;
     $('emergency-btn').disabled = unavailable;
     $('csv-btn').disabled = !array(state?.trade_history).length;
 }
@@ -101,6 +103,8 @@ $('connect-form').addEventListener('submit',async e=>{e.preventDefault(); if(sta
 $('refresh-btn').addEventListener('click',refresh);
 $('reconcile-btn').addEventListener('click',()=>mutate('/api/reconcile',{}));
 $('reset-btn').addEventListener('click',()=>{if(confirm('بدء جلسة ورقية جديدة؟ سيُؤرشف سجل الجلسة الحالية ويُعاد الرصيد الورقي إلى القيمة الابتدائية. تظل الدخولات متوقفة حتى تستأنفها.'))mutate('/api/paper/reset',{confirmation:'RESET PAPER'});});
+$('mode-paper-btn')?.addEventListener('click',()=>{if(confirm('التحويل إلى وضع المحاكاة الورقية (PAPER)؟ سيتم بدء محاكاة آمنة.'))mutate('/api/mode',{mode:'PAPER'});});
+$('mode-live-btn')?.addEventListener('click',()=>{if(confirm('تنبيه هام: التحويل إلى وضع التداول الحقيقي (LIVE) بأموال حقيقية على بينانس؟ تأكد من إدخال مفاتيح API الخاصة بك.'))mutate('/api/mode',{mode:'LIVE'});});
 $('pause-btn').addEventListener('click',()=>mutate('/api/active',{active:false}));
 $('resume-btn').addEventListener('click',()=>mutate('/api/active',{active:true}));
 $('emergency-btn').addEventListener('click',()=>{if(confirm('إغلاق كل الصفقات وإيقاف الدخول؟ قد تظهر خسارة محققة.')) mutate('/api/close_all',{});});
