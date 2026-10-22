@@ -15,7 +15,7 @@ class OpportunityExecutor:
         if age < -60 or age > config.max_news_age_seconds:
             return False
         klines = exchange.get_historical_klines(item.symbol, "1m", 40)
-        if klines and klines[-1].get("close_time") and now.timestamp()*1000 - klines[-1]["close_time"] > 180000:
+        if klines and klines[-1].get("close_time") and now.timestamp() * 1000 - klines[-1]["close_time"] > 180000:
             return False
 
         def _reject_early(phase_name, reason_msg):
@@ -24,15 +24,20 @@ class OpportunityExecutor:
             del latest_news[:-30]
             return False
 
-        # 1. Bitcoin Market Gate Veto
+        eff_threshold = scoring_engine.min_score
         if not item.symbol.startswith("BTC"):
             btc_kl = exchange.get_historical_klines("BTC/USDT", "1m", 6)
             from src.core.btc_gate import BitcoinMarketGate
             is_btc_safe, btc_reason = BitcoinMarketGate().evaluate(btc_kl)
             if not is_btc_safe:
                 return _reject_early("BTC_VETO", btc_reason)
+            btc_15m = exchange.get_historical_klines("BTC/USDT", "15m", 15)
+            if btc_15m:
+                from src.core.adaptive_regulator import AdaptiveScoreRegulator
+                eff_threshold, _, reg_msg = AdaptiveScoreRegulator(scoring_engine.min_score).evaluate_regime(btc_15m)
+                if eff_threshold >= 99.0:
+                    return _reject_early("MACRO_VETO", reg_msg)
 
-        # 2. Multi-Timeframe 15m Alignment Veto
         kl_15m = exchange.get_historical_klines(item.symbol, "15m", 25)
         if kl_15m:
             from src.core.mtf_confluence import MultiTimeframeConfluence
@@ -40,23 +45,23 @@ class OpportunityExecutor:
             if not aligned:
                 return _reject_early("MTF_VETO", mtf_msg)
 
-        # 3. Cooldown Veto
         if hasattr(exchange, "_cooldown_mgr"):
             cooling, rem = exchange._cooldown_mgr.is_in_cooldown(item.symbol)
             if cooling:
                 return _reject_early("COOLDOWN", f"فترة تهدئة ({rem}د)")
 
         phase, phase_score = regime_detector.detect_phase(klines)
-        result = scoring_engine.evaluate(item.symbol, phase, phase_score, klines, item.sentiment_score)
-        entry = {"symbol": item.symbol, "title": item.title, "score": result.total_score,
-                 "approved": result.is_approved, "phase": phase.value,
-                 "reason": result.rejection_reason or "تجاوز فحص الإشارة", "published_at": published.isoformat()}
+        res = scoring_engine.evaluate(item.symbol, phase, phase_score, klines, item.sentiment_score)
+        approved = res.is_approved and (res.total_score >= eff_threshold)
+        rejection = res.rejection_reason or (None if approved else f"Score {res.total_score:.1f} < Adaptive {eff_threshold:.1f}")
+        entry = {"symbol": item.symbol, "title": item.title, "score": res.total_score,
+                 "approved": approved, "phase": phase.value, "reason": rejection or "تجاوز فحص الإشارة",
+                 "published_at": published.isoformat()}
         latest_news.append(entry)
         del latest_news[:-30]
-        if not result.is_approved:
+        if not approved:
             return False
 
-        # 4. Anti-Slippage Shield
         cur_p = exchange.get_ticker_price(item.symbol)
         if cur_p > 0 and klines:
             from src.exchange.slippage_guard import SlippageGuard
@@ -72,8 +77,7 @@ class OpportunityExecutor:
             return False
 
         client_id = before_order(item.symbol, "BUY", slot_size) if before_order else None
-        kw = {"client_order_id": client_id} if client_id else {}
-        order = exchange.place_market_buy(item.symbol, slot_size, **kw)
+        order = exchange.place_market_buy(item.symbol, slot_size, **({"client_order_id": client_id} if client_id else {}))
         if order.success and order.price > 0 and order.amount > 0:
             positions[item.symbol] = Position(
                 symbol=item.symbol, entry_price=order.price, current_price=order.price,
@@ -88,11 +92,10 @@ class OpportunityExecutor:
             from src.core.atr_calculator import ATRCalculator
             tp_pct, sl_pct, _ = ATRCalculator().calculate_targets(order.price, klines)
             pos_dict = {"symbol": item.symbol, "entry_price": order.price, "cost_basis": slot_size,
-                        "target_tp": round(order.price * (1 + tp_pct), 4),
-                        "stop_loss": round(order.price * (1 - sl_pct), 4), "slot_id": slot_id}
+                        "target_tp": round(order.price * (1 + tp_pct), 4), "stop_loss": round(order.price * (1 - sl_pct), 4), "slot_id": slot_id}
             if journal:
-                journal.log_trade_opened(pos_dict, item.title, result.total_score, phase.value)
+                journal.log_trade_opened(pos_dict, item.title, res.total_score, phase.value)
             if hasattr(exchange, "_notifier"):
-                exchange._notifier.notify_trade_opened(pos_dict, item.title, result.total_score)
+                exchange._notifier.notify_trade_opened(pos_dict, item.title, res.total_score)
             return True
         return False
