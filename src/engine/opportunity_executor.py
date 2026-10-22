@@ -69,6 +69,11 @@ class OpportunityExecutor:
             if not ok_slip:
                 entry.update(approved=False, reason=msg_slip)
                 return False
+            from src.exchange.orderbook_depth import OrderBookDepthGuard
+            ok_obi, msg_obi, _ = OrderBookDepthGuard().evaluate_depth(item.symbol)
+            if not ok_obi:
+                entry.update(approved=False, reason=msg_obi)
+                return False
 
         rules = exchange.get_market_rules(item.symbol)
         minimum = max(config.min_notional, rules.get("min_notional", 0))
