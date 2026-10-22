@@ -41,11 +41,19 @@ class TelegramCommandListener:
             res = self.worker.close_all()
             return f"🛑 *تم إغلاق الصفقات وإيقاف الدخول*\nالحالة: `{res.get('status')}`"
         elif cmd in ("/pause", "pause", "ايقاف"):
-            self.worker.set_active(False)
-            return "⏸️ *تم إيقاف فتح صفقات جديدة بنجاح.*"
+            try:
+                self.worker.set_active(False)
+                return "⏸️ *تم إيقاف فتح صفقات جديدة بنجاح.*"
+            except Exception as e:
+                return f"⚠️ *تعذر الإيقاف:* {e}"
         elif cmd in ("/resume", "resume", "استئناف"):
-            self.worker.set_active(True)
-            return "▶️ *تم استئناف البحث والدخول في الصفقات.*"
+            try:
+                self.worker.set_active(True)
+                return "▶️ *تم استئناف البحث والدخول في الصفقات.*"
+            except ValueError as e:
+                return f"🛑 *تعذر الاستئناف:* {e}"
+            except Exception as e:
+                return f"⚠️ *خطأ غير متوقع:* {e}"
         elif cmd in ("/autopsy", "autopsy", "تشريح"):
             from src.core.session_autopsy import SessionAutopsy
             rep = SessionAutopsy.analyze_session(getattr(self.worker, 'trade_history', []))
@@ -74,8 +82,7 @@ class TelegramCommandListener:
                             msg = u.get("message", {})
                             sender = str(msg.get("chat", {}).get("id", ""))
                             if sender == self.chat_id and "text" in msg:
-                                reply_text = self.handle_command(msg["text"])
-                                self._reply(reply_text)
+                                self._reply(self.handle_command(msg["text"]))
                 except Exception:
                     time.sleep(2)
         threading.Thread(target=_loop, daemon=True, name="TelegramListener").start()

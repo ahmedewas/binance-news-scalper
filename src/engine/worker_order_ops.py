@@ -10,8 +10,7 @@ class WorkerOrderOpsMixin:
         if self.storage_failed:
             raise RuntimeError('State storage unavailable')
         cid = 'sc-' + uuid.uuid4().hex[:28]
-        self.pending_orders[cid] = dict(symbol=symbol, side=side, quantity=quantity,
-                                        created_at=datetime.now(timezone.utc).isoformat())
+        self.pending_orders[cid] = dict(symbol=symbol, side=side, quantity=quantity, created_at=datetime.now(timezone.utc).isoformat())
         self.persist()
         return cid
 
@@ -30,8 +29,7 @@ class WorkerOrderOpsMixin:
         if self.positions[symbol].execution_uncertain:
             return dict(success=False, symbol=symbol, message='الأمر غير محسوم؛ يلزم مطابقته', status='UNKNOWN')
         cid = self._before_order(symbol, 'SELL', self.positions[symbol].amount * ratio)
-        result = PositionHandler.execute_exit(self.exchange, self.positions, symbol, reason,
-                                              ratio, self.trade_history, client_order_id=cid)
+        result = PositionHandler.execute_exit(self.exchange, self.positions, symbol, reason, ratio, self.trade_history, client_order_id=cid)
         if result['status'] == 'UNKNOWN':
             self.is_active = False
             self.pending_orders[cid]['order_id'] = result.get('order_id', '')
@@ -64,8 +62,7 @@ class WorkerOrderOpsMixin:
 
     def reconcile_pending(self) -> dict:
         with self.lock:
-            results = []
-            self.is_active = False
+            results, self.is_active = [], False
             for cid, intent in list(self.pending_orders.items()):
                 order = self.exchange.reconcile_order(intent['symbol'], cid)
                 if order.status == 'UNKNOWN':
@@ -81,10 +78,8 @@ class WorkerOrderOpsMixin:
                     if slot is None:
                         results.append(dict(id=cid, success=False, message='لا توجد خانة لتسوية المركز'))
                         continue
-                    self.positions[sym] = Position(
-                        sym, order.price, order.price, order.amount, order.price,
-                        datetime.fromisoformat(intent['created_at']), slot, cost_basis=order.cost + order.fee_quote
-                    )
+                    self.positions[sym] = Position(sym, order.price, order.price, order.amount, order.price,
+                                                   datetime.fromisoformat(intent['created_at']), slot, cost_basis=order.cost + order.fee_quote)
                 elif order.success:
                     result = PositionHandler.apply_fill(self.positions, sym, 'RECONCILED_EXIT', order, self.trade_history)
                     if not result['success']:

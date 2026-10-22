@@ -36,6 +36,15 @@ def test_telegram_listener_pause_and_resume():
     assert "استئناف" in reply_resume
 
 
+def test_telegram_listener_resume_error_handling():
+    worker = MagicMock()
+    worker.set_active.side_effect = ValueError("تجاوز حد خسارة الجلسة")
+    listener = TelegramCommandListener("fake_token", "12345", worker)
+    reply = listener.handle_command("/resume")
+    assert "تعذر الاستئناف" in reply
+    assert "تجاوز حد خسارة الجلسة" in reply
+
+
 def test_telegram_listener_close_all():
     worker = MagicMock()
     worker.close_all.return_value = {"status": "ALL_POSITIONS_CLOSED"}

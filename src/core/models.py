@@ -49,6 +49,8 @@ class Position:
     entry_volume: float = 0.0
     cost_basis: float = 0.0
     execution_uncertain: bool = False
+    target_tp: float = 0.0
+    stop_loss: float = 0.0
 
 
 @dataclass

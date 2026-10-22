@@ -43,6 +43,8 @@ def test_switch_mode_paper_cycle(worker):
     assert res['is_active'] is True
     assert worker.mode == 'PAPER'
     assert isinstance(worker.exchange, PaperExchange)
+    assert hasattr(worker.exchange, "_cooldown_mgr")
+    assert hasattr(worker.exchange, "_notifier")
 
 
 def test_api_mode_endpoint(worker):
@@ -52,7 +54,6 @@ def test_api_mode_endpoint(worker):
     assert res.status_code == 200
     assert res.json()['mode'] == 'PAPER'
 
-    # Invalid mode rejected
     bad_res = client.post('/api/mode', json={'mode': 'INVALID'},
                           headers={'X-Requested-With': 'ScalperDashboard'})
     assert bad_res.status_code == 422

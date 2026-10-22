@@ -1,5 +1,5 @@
 """Binance Order Precision Sanitizer: Normalizes quantities and price ticks to exchange rules."""
-import math
+from decimal import Decimal, ROUND_DOWN
 from typing import Dict, Any
 
 
@@ -9,9 +9,10 @@ class PrecisionFormatter:
         """Truncates quantity to exact step size without rounding up into deficit."""
         if step_size <= 0:
             return amount
-        precision = max(0, int(round(-math.log10(step_size))))
-        factor = 10.0 ** precision
-        return math.floor(amount * factor) / factor
+        d_amt = Decimal(str(amount))
+        d_step = Decimal(str(step_size))
+        steps = (d_amt / d_step).quantize(Decimal("1"), rounding=ROUND_DOWN)
+        return float(steps * d_step)
 
     @staticmethod
     def sanitize_amount(symbol: str, raw_amount: float, market_rules: Dict[str, Any] = None) -> float:

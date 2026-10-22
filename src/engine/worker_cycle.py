@@ -32,8 +32,10 @@ class WorkerCycleMixin:
     def _poll_news(self):
         if self.news_future is not None and self.news_future.done():
             try:
-                self.candidates.extend(self.news_future.result())
-                self.candidates = self.candidates[-100:]
+                items = self.news_future.result()
+                with self.lock:
+                    self.candidates.extend(items)
+                    self.candidates = self.candidates[-100:]
             except Exception as exc:
                 self.error('تعذر تحديث مصادر البيانات: ' + type(exc).__name__)
             self.news_future = None
@@ -76,14 +78,12 @@ class WorkerCycleMixin:
     def step(self):
         try:
             self.manage_positions()
-            self.cash = self.exchange.get_balance('USDT')
             with self.lock:
+                self.cash = self.exchange.get_balance('USDT')
                 self._publish()
             self._poll_news()
             self.process_news_opportunities()
             self.last_step = datetime.now(timezone.utc).isoformat()
-            with self.lock:
-                self.persist()
         except Exception as exc:
             self.is_active = False
             self.error('توقفت الدخولات بعد خطأ: ' + type(exc).__name__)

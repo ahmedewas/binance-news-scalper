@@ -20,7 +20,6 @@ class FastBacktester:
         for i in range(20, len(klines)):
             c = float(klines[i].get("close", 0.0))
             if not in_pos:
-                # Breakout signal simulation: volume spike + positive return
                 prev_vols = [float(k.get("volume", 0.0)) for k in klines[i-10:i]]
                 avg_v = sum(prev_vols) / len(prev_vols) if prev_vols else 1.0
                 c_vol = float(klines[i].get("volume", 0.0))
@@ -30,13 +29,13 @@ class FastBacktester:
                 if score >= min_score and ret_5m > 0.002:
                     in_pos, entry_p, highest_p, entry_i = True, c, c, i
             else:
-                if c > highest_p:
-                    highest_p = c
-                gain = (c - entry_p) / entry_p
+                bar_high = float(klines[i].get("high", c))
+                bar_low = float(klines[i].get("low", c))
+                highest_p = max(highest_p, bar_high)
                 gain_high = (highest_p - entry_p) / entry_p
+                gain_low = (bar_low - entry_p) / entry_p
                 elapsed = i - entry_i
 
-                # Ratcheted Ladder Stop Floor
                 stop_pct = -sl_pct
                 if gain_high >= 0.020:
                     stop_pct = 0.015
@@ -47,18 +46,24 @@ class FastBacktester:
 
                 should_exit = False
                 reason = "HOLD"
-                if gain <= stop_pct:
+                exit_price = c
+
+                if gain_low <= stop_pct:
                     should_exit, reason = True, "STOP_OR_RATCHET"
-                elif gain >= tp_pct:
+                    exit_price = round(entry_p * (1.0 + stop_pct), 6)
+                elif gain_high >= tp_pct:
                     should_exit, reason = True, "TAKE_PROFIT"
+                    exit_price = round(entry_p * (1.0 + tp_pct), 6)
                 elif elapsed >= 20:
                     should_exit, reason = True, "TIMEOUT"
+                    exit_price = c
 
                 if should_exit:
-                    net_pnl = (gain - (self.fee_rate * 2)) * self.slot_size
+                    actual_gain = (exit_price - entry_p) / entry_p
+                    net_pnl = (actual_gain - (self.fee_rate * 2)) * self.slot_size
                     trades.append({
-                        "symbol": symbol, "entry_price": entry_p, "exit_price": c,
-                        "pnl_usd": round(net_pnl, 4), "pnl_pct": round(gain * 100, 2),
+                        "symbol": symbol, "entry_price": entry_p, "exit_price": exit_price,
+                        "pnl_usd": round(net_pnl, 4), "pnl_pct": round(actual_gain * 100, 2),
                         "duration_mins": elapsed, "reason": reason
                     })
                     in_pos = False

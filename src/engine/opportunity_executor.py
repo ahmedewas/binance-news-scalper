@@ -2,6 +2,8 @@
 from datetime import datetime, timezone
 from src.config import config
 from src.core.models import Position
+from src.core.atr_calculator import ATRCalculator
+from src.engine.opportunity_filters import OpportunityFilters
 
 
 class OpportunityExecutor:
@@ -24,26 +26,11 @@ class OpportunityExecutor:
             del latest_news[:-30]
             return False
 
-        eff_threshold = scoring_engine.min_score
-        if not item.symbol.startswith("BTC"):
-            btc_kl = exchange.get_historical_klines("BTC/USDT", "1m", 6)
-            from src.core.btc_gate import BitcoinMarketGate
-            is_btc_safe, btc_reason = BitcoinMarketGate().evaluate(btc_kl)
-            if not is_btc_safe:
-                return _reject_early("BTC_VETO", btc_reason)
-            btc_15m = exchange.get_historical_klines("BTC/USDT", "15m", 15)
-            if btc_15m:
-                from src.core.adaptive_regulator import AdaptiveScoreRegulator
-                eff_threshold, _, reg_msg = AdaptiveScoreRegulator(scoring_engine.min_score).evaluate_regime(btc_15m)
-                if eff_threshold >= 99.0:
-                    return _reject_early("MACRO_VETO", reg_msg)
-
-        kl_15m = exchange.get_historical_klines(item.symbol, "15m", 25)
-        if kl_15m:
-            from src.core.mtf_confluence import MultiTimeframeConfluence
-            aligned, mtf_msg = MultiTimeframeConfluence().check_higher_timeframe(kl_15m)
-            if not aligned:
-                return _reject_early("MTF_VETO", mtf_msg)
+        safe_macro, eff_thresh, rej_phase, rej_msg = OpportunityFilters.check_macro_gates(
+            item.symbol, exchange, scoring_engine.min_score
+        )
+        if not safe_macro:
+            return _reject_early(rej_phase, rej_msg)
 
         if hasattr(exchange, "_cooldown_mgr"):
             cooling, rem = exchange._cooldown_mgr.is_in_cooldown(item.symbol)
@@ -51,9 +38,11 @@ class OpportunityExecutor:
                 return _reject_early("COOLDOWN", f"فترة تهدئة ({rem}د)")
 
         phase, phase_score = regime_detector.detect_phase(klines)
-        res = scoring_engine.evaluate(item.symbol, phase, phase_score, klines, item.sentiment_score)
-        approved = res.is_approved and (res.total_score >= eff_threshold)
-        rejection = res.rejection_reason or (None if approved else f"Score {res.total_score:.1f} < Adaptive {eff_threshold:.1f}")
+        h_score, cvd_score = OpportunityFilters.calculate_alpha_metrics(klines) if klines else (None, None)
+        res = scoring_engine.evaluate(item.symbol, phase, phase_score, klines, item.sentiment_score,
+                                      cvd_score=cvd_score, hurst_score=h_score)
+        approved = res.is_approved and (res.total_score >= eff_thresh)
+        rejection = res.rejection_reason or (None if approved else f"Score {res.total_score:.1f} < Adaptive {eff_thresh:.1f}")
         entry = {"symbol": item.symbol, "title": item.title, "score": res.total_score,
                  "approved": approved, "phase": phase.value, "reason": rejection or "تجاوز فحص الإشارة",
                  "published_at": published.isoformat()}
@@ -63,17 +52,10 @@ class OpportunityExecutor:
             return False
 
         cur_p = exchange.get_ticker_price(item.symbol)
-        if cur_p > 0 and klines:
-            from src.exchange.slippage_guard import SlippageGuard
-            ok_slip, msg_slip, _ = SlippageGuard().validate_buy_slippage(item.symbol, float(klines[-1]["close"]), cur_p)
-            if not ok_slip:
-                entry.update(approved=False, reason=msg_slip)
-                return False
-            from src.exchange.orderbook_depth import OrderBookDepthGuard
-            ok_obi, msg_obi, _ = OrderBookDepthGuard().evaluate_depth(item.symbol)
-            if not ok_obi:
-                entry.update(approved=False, reason=msg_obi)
-                return False
+        ok_micro, micro_msg = OpportunityFilters.check_microstructure(item.symbol, klines, cur_p)
+        if not ok_micro:
+            entry.update(approved=False, reason=micro_msg)
+            return False
 
         rules = exchange.get_market_rules(item.symbol)
         minimum = max(config.min_notional, rules.get("min_notional", 0))
@@ -84,23 +66,23 @@ class OpportunityExecutor:
         client_id = before_order(item.symbol, "BUY", slot_size) if before_order else None
         order = exchange.place_market_buy(item.symbol, slot_size, **({"client_order_id": client_id} if client_id else {}))
         if order.success and order.price > 0 and order.amount > 0:
+            tp_pct, sl_pct, _ = ATRCalculator().calculate_targets(order.price, klines)
+            target_tp = round(order.price * (1.0 + tp_pct), 4)
+            stop_loss = round(order.price * (1.0 - sl_pct), 4)
             positions[item.symbol] = Position(
                 symbol=item.symbol, entry_price=order.price, current_price=order.price,
                 amount=order.amount, highest_price=order.price, entry_time=now, slot_id=slot_id,
                 entry_volume=float(klines[-1]["volume"]), cost_basis=(order.cost + order.fee_quote) if order.cost > 0 else slot_size,
+                target_tp=target_tp, stop_loss=stop_loss,
             )
-        else:
-            entry.update(approved=False, reason=order.message or order.status)
-        if after_order:
-            after_order(client_id, order)
-        if order.success and item.symbol in positions:
-            from src.core.atr_calculator import ATRCalculator
-            tp_pct, sl_pct, _ = ATRCalculator().calculate_targets(order.price, klines)
             pos_dict = {"symbol": item.symbol, "entry_price": order.price, "cost_basis": slot_size,
-                        "target_tp": round(order.price * (1 + tp_pct), 4), "stop_loss": round(order.price * (1 - sl_pct), 4), "slot_id": slot_id}
+                        "target_tp": target_tp, "stop_loss": stop_loss, "slot_id": slot_id}
             if journal:
                 journal.log_trade_opened(pos_dict, item.title, res.total_score, phase.value)
             if hasattr(exchange, "_notifier"):
                 exchange._notifier.notify_trade_opened(pos_dict, item.title, res.total_score)
-            return True
-        return False
+        else:
+            entry.update(approved=False, reason=order.message or order.status)
+        if after_order:
+            after_order(client_id, order)
+        return order.success and (item.symbol in positions)

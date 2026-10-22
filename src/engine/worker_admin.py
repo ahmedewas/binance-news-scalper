@@ -36,6 +36,10 @@ class WorkerAdminMixin:
             else:
                 from src.exchange.paper import PaperExchange
                 self.exchange = PaperExchange(config.initial_paper_balance)
+            self.exchange._cooldown_mgr = getattr(self, "cooldown_mgr", None)
+            self.exchange._notifier = getattr(self, "notifier", None)
+            if self.store:
+                self.store = StateStore(self.store.path.parent / f"state-{mode_upper.lower()}.json")
             self.mode = mode_upper
             self.cash = float(self.exchange.get_balance('USDT'))
             self.tracker = PerformanceTracker(self.cash)

@@ -1,8 +1,5 @@
 """Live Order Operations: Execution parsing, submission, and reconciliation."""
-import logging
-import math
-import uuid
-import ccxt
+import logging, math, uuid, ccxt
 from src.core.models import OrderResult
 
 logger = logging.getLogger("LiveExchange")
@@ -14,8 +11,7 @@ class LiveOrderMixin:
             return 0.0, 0.0, False
         fees = order.get("fees") or ([order["fee"]] if order.get("fee") else [])
         market = self.client.market(symbol)
-        base, quote = market["base"], market["quote"]
-        fee_b = fee_q = 0.0
+        base, quote, fee_b, fee_q = market["base"], market["quote"], 0.0, 0.0
         for fee in fees:
             val = float(fee.get("cost") or 0)
             if not math.isfinite(val) or val < 0:
@@ -36,8 +32,7 @@ class LiveOrderMixin:
 
     def _result(self, symbol: str, side: str, order: dict) -> OrderResult:
         oid = str(order.get("id") or "")
-        def unk(msg: str) -> OrderResult:
-            return OrderResult(False, oid, symbol, 0, 0, side, "UNKNOWN", msg)
+        unk = lambda msg: OrderResult(False, oid, symbol, 0, 0, side, "UNKNOWN", msg)
         status, filled = str(order.get("status") or "").lower(), float(order.get("filled") or 0)
         if status not in {"closed", "canceled", "cancelled", "expired", "rejected"}:
             return unk("Order is not terminal; reconciliation required")
@@ -68,16 +63,15 @@ class LiveOrderMixin:
             if price <= 0:
                 raise ValueError("Fresh price unavailable")
             qty = self.normalize_amount(symbol, quantity) if side == "SELL" else quantity
-            amount = qty if side == "SELL" else qty / price
-            notional = qty * price if side == "SELL" else qty
+            amount, notional = qty if side == "SELL" else qty / price, qty * price if side == "SELL" else qty
             if qty <= 0 or amount < rules["min_amount"] or notional < rules["min_notional"]:
                 raise ValueError("Order below market minimum")
         except Exception as exc:
             return OrderResult(False, "", symbol, 0, 0, side, "REJECTED", str(exc))
         cid = client_order_id or "scalper_" + uuid.uuid4().hex[:24]
         try:
-            params = {"newClientOrderId": cid}
-            order = self.client.create_order(symbol, "market", "buy", None, None, {"quoteOrderQty": qty, **params}) if side == "BUY" else self.client.create_order(symbol, "market", "sell", qty, None, params)
+            p = {"newClientOrderId": cid}
+            order = self.client.create_order(symbol, "market", "buy", None, None, {"quoteOrderQty": qty, **p}) if side == "BUY" else self.client.create_order(symbol, "market", "sell", qty, None, p)
             res = self._result(symbol, side, order)
             res.client_order_id = cid
             return res

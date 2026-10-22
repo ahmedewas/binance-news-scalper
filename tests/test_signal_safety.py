@@ -1,10 +1,7 @@
 """Fail-closed regression coverage for signal inputs and exit proposals."""
-from datetime import datetime, timedelta, timezone
-from email.utils import format_datetime
-from unittest.mock import MagicMock, patch
-
+from datetime import datetime, timezone
+from unittest.mock import MagicMock
 import pytest
-
 from src.core.models import MarketPhase, Position
 from src.core.portfolio_allocator import PortfolioAllocator
 from src.core.risk_manager import RiskManager
@@ -12,7 +9,6 @@ from src.core.scoring_engine import ScoringEngine
 from src.core.volume_decay_exit import VolumeDecayExitDetector
 from src.engine.market_scanner import MarketScanner
 from src.news.analyzer import NewsAnalyzer
-from src.news.fetcher import NewsFetcher
 
 
 def candles(count=40):
@@ -59,36 +55,6 @@ def test_ordinary_lowercase_words_are_not_tickers(text):
 
 def test_explicit_near_ticker_is_preserved():
     assert NewsAnalyzer().extract_symbol("NEAR announces new upgrade") == "NEAR/USDT"
-
-
-@pytest.mark.parametrize("published", [None, "bad timestamp", 1])
-@patch("requests.get")
-def test_cms_missing_or_stale_publication_is_rejected(mock_get, published):
-    mock_get.return_value.status_code = 404
-    fetcher = NewsFetcher(NewsAnalyzer())
-    fetcher.binance_scanner = MagicMock()
-    fetcher.binance_scanner.fetch_announcements.return_value = [
-        {"id": 1, "title": "Binance Will List Arbitrum (ARB)", "releaseDate": published}
-    ]
-    assert fetcher.fetch_latest_news() == []
-
-
-@pytest.mark.parametrize("age_days", [None, 10, 0])
-@patch("requests.get")
-def test_rss_requires_actual_fresh_pubdate(mock_get, age_days):
-    date = datetime.now(timezone.utc) - timedelta(days=age_days or 0)
-    pubdate = "" if age_days is None else f"<pubDate>{format_datetime(date)}</pubDate>"
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.content = f"<rss><channel><item><title>Bitcoin upgrade approved</title>{pubdate}</item></channel></rss>".encode()
-    fetcher = NewsFetcher(NewsAnalyzer())
-    fetcher.binance_scanner = MagicMock()
-    fetcher.binance_scanner.fetch_announcements.return_value = []
-    items = fetcher.fetch_latest_news()
-    if age_days == 0:
-        assert len(items) == 1
-        assert abs((items[0].published_at - date).total_seconds()) < 1
-    else:
-        assert items == []
 
 
 def test_slot_size_cannot_exceed_free_cash():

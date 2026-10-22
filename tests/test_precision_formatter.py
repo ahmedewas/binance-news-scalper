@@ -4,19 +4,21 @@ from src.exchange.precision_formatter import PrecisionFormatter
 
 
 def test_round_down_step():
-    # Step size 0.01
+    # Decimal powers of 10
     assert PrecisionFormatter.round_down_step(12.3456, 0.01) == pytest.approx(12.34)
-    # Step size 0.001
     assert PrecisionFormatter.round_down_step(0.1239, 0.001) == pytest.approx(0.123)
-    # Step size 1.0 (integer coins)
     assert PrecisionFormatter.round_down_step(15.9, 1.0) == pytest.approx(15.0)
+    # Non-decimal steps (Binance specific steps: 0.2, 0.05, 2.0)
+    assert PrecisionFormatter.round_down_step(0.35, 0.2) == pytest.approx(0.20)
+    assert PrecisionFormatter.round_down_step(0.17, 0.05) == pytest.approx(0.15)
+    assert PrecisionFormatter.round_down_step(9.5, 2.0) == pytest.approx(8.0)
     # Zero or negative step size
     assert PrecisionFormatter.round_down_step(10.5, 0.0) == pytest.approx(10.5)
 
 
 def test_sanitize_amount():
-    rules = {"step_size": 0.01, "min_amount": 0.01}
-    assert PrecisionFormatter.sanitize_amount("SOL/USDT", 1.239, rules) == pytest.approx(1.23)
+    rules = {"step_size": 0.05, "min_amount": 0.05}
+    assert PrecisionFormatter.sanitize_amount("SOL/USDT", 0.179, rules) == pytest.approx(0.15)
     assert PrecisionFormatter.sanitize_amount("SOL/USDT", -5.0, rules) == 0.0
     # Empty rules fallback
     assert PrecisionFormatter.sanitize_amount("SOL/USDT", 2.3456789, {}) == pytest.approx(2.345679)
