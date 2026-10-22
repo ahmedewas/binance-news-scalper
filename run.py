@@ -1,6 +1,5 @@
 """Main entry point: initializes components, runs background loop and web UI."""
 import threading
-import time
 import logging
 from pathlib import Path
 import uvicorn
@@ -19,40 +18,22 @@ from src.core.state_store import StateStore
 from src.core.audit_journal import AuditJournal
 from src.core.process_lock import ProcessLock
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("Main")
 
 
 def build_worker() -> BotWorker:
-    if config.trading_mode == "LIVE":
-        logger.info("Initializing LIVE Binance Spot Exchange via CCXT...")
-        exchange = LiveExchange(config.api_key, config.api_secret)
-    else:
-        logger.info(f"Initializing PAPER Exchange with ${config.initial_paper_balance}...")
-        exchange = PaperExchange(config.initial_paper_balance)
-
-    # Keep a buffer so the configured stop does not immediately leave dust below
-    # the exchange minimum. Per-symbol rules are also checked before each order.
-    exit_buffered_minimum = config.min_notional / (1-config.stop_loss_pct) * 1.003
-    allocator = PortfolioAllocator(exit_buffered_minimum, config.max_slots)
+    exchange = LiveExchange(config.api_key, config.api_secret) if config.trading_mode == "LIVE" else PaperExchange(config.initial_paper_balance)
+    exit_min = config.min_notional / (1 - config.stop_loss_pct) * 1.003
+    allocator = PortfolioAllocator(exit_min, config.max_slots)
     regime = MarketRegimeDetector()
     scoring = ScoringEngine(config.min_score)
-    risk = RiskManager(
-        config.trailing_tp_pct, config.trailing_offset_pct,
-        config.stop_loss_pct, config.timeout_minutes
-    )
+    risk = RiskManager(config.trailing_tp_pct, config.trailing_offset_pct, config.stop_loss_pct, config.timeout_minutes)
     from src.engine.market_scanner import MarketScanner
-    market_scanner = MarketScanner(PaperExchange(0), regime, scoring)
-    news_analyzer = NewsAnalyzer()
-    news_fetcher = NewsFetcher(news_analyzer, market_scanner)
-
+    fetcher = NewsFetcher(NewsAnalyzer(), MarketScanner(PaperExchange(0), regime, scoring))
     data_dir = Path(config.state_dir)
-    if not data_dir.is_absolute():
-        data_dir = Path(__file__).parent / data_dir
-    return BotWorker(exchange, allocator, regime, scoring, risk, news_fetcher,
+    data_dir = data_dir if data_dir.is_absolute() else Path(__file__).parent / data_dir
+    return BotWorker(exchange, allocator, regime, scoring, risk, fetcher,
                      store=StateStore(data_dir / f"state-{config.trading_mode.lower()}.json"),
                      journal=AuditJournal(str(data_dir / f"journal-{config.trading_mode.lower()}.md")))
 
@@ -74,17 +55,17 @@ if __name__ == "__main__":
     if config.trading_mode == "LIVE" and not (config.api_key and config.api_secret):
         raise SystemExit("LIVE requires Binance API credentials.")
     state_root = Path(config.state_dir)
-    if not state_root.is_absolute():
-        state_root = Path(__file__).parent / state_root
+    state_root = state_root if state_root.is_absolute() else Path(__file__).parent / state_root
     instance_lock = ProcessLock(state_root / f"{config.trading_mode.lower()}.lock")
     server_config = uvicorn.Config("unused", host=config.host, port=config.port, log_level="warning")
-    # Reserve the listening port before starting any trading activity.
     server_socket = server_config.bind_socket()
     worker = build_worker()
+    if getattr(config, "telegram_bot_token", None) and getattr(config, "telegram_chat_id", None):
+        from src.core.telegram_command_listener import TelegramCommandListener
+        TelegramCommandListener(config.telegram_bot_token, config.telegram_chat_id, worker).start()
     stop = threading.Event()
     t = threading.Thread(target=worker_loop, args=(worker, stop), daemon=True)
     t.start()
-
     app = create_app(worker)
     server_config.app = app
     logger.info(f"Serving Dashboard on http://{config.host}:{config.port}")

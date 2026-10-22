@@ -8,7 +8,7 @@ class SessionAutopsy:
         """Performs forensic performance breakdown across all session trades."""
         if not trades:
             return {
-                "total_trades": 0, "win_rate": 0.0, "net_pnl_usd": 0.0,
+                "total_trades": 0, "wins": 0, "losses": 0, "win_rate": 0.0, "net_pnl_usd": 0.0,
                 "best_symbol": "None", "top_exit_reason": "None",
                 "recommendation": "لا توجد صفقات مكتملة كافية بعد لإجراء الفحص الذاتي.",
             }
