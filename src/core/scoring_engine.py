@@ -71,11 +71,16 @@ class ScoringEngine:
             weighted = weighted * 0.85 + (hurst_score * 0.075 + mm_depletion_score * 0.075)
 
         from src.core.volatility_squeeze import VolatilitySqueezeDetector
+        from src.core.bayesian_scorer import BayesianScorer
         _, is_fired, _, _ = VolatilitySqueezeDetector().evaluate(klines)
         if is_fired:
             weighted = min(100.0, weighted + 10.0)
-
-        total = round(min(100.0, max(0.0, weighted)), 2)
+        cvd_pos = bool(cvd_score is None or cvd_score >= 50.0)
+        _, bayes_score, _ = BayesianScorer().calculate_probability(
+            phase=phase.value, is_squeeze_fired=is_fired, cvd_positive=cvd_pos,
+            is_sector_leader_surging=False, is_vp_favorable=True, is_obi_healthy=True
+        )
+        total = round(min(100.0, max(0.0, weighted * 0.75 + bayes_score * 0.25)), 2)
         approved = total >= self.min_score
         reason = None if approved else f"Score {total} < Threshold {self.min_score}"
 
