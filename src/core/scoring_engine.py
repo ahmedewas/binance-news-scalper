@@ -70,6 +70,11 @@ class ScoringEngine:
         if hurst_score is not None and mm_depletion_score is not None:
             weighted = weighted * 0.85 + (hurst_score * 0.075 + mm_depletion_score * 0.075)
 
+        from src.core.volatility_squeeze import VolatilitySqueezeDetector
+        _, is_fired, _, _ = VolatilitySqueezeDetector().evaluate(klines)
+        if is_fired:
+            weighted = min(100.0, weighted + 10.0)
+
         total = round(min(100.0, max(0.0, weighted)), 2)
         approved = total >= self.min_score
         reason = None if approved else f"Score {total} < Threshold {self.min_score}"

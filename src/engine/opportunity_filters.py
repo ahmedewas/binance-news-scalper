@@ -54,7 +54,7 @@ class OpportunityFilters:
 
     @staticmethod
     def check_microstructure(symbol: str, klines: List[Dict[str, Any]], cur_price: float) -> Tuple[bool, str]:
-        """Validates market buy spread slippage and L2 order book imbalance walls."""
+        """Validates market buy spread slippage, L2 depth walls, and volume profile value area."""
         if cur_price > 0 and klines:
             ok_slip, msg_slip, _ = SlippageGuard().validate_buy_slippage(symbol, float(klines[-1]["close"]), cur_price)
             if not ok_slip:
@@ -62,4 +62,12 @@ class OpportunityFilters:
             ok_obi, msg_obi, _ = OrderBookDepthGuard().evaluate_depth(symbol)
             if not ok_obi:
                 return False, msg_obi
+            from src.exchange.liquidity_walls import LiquidityWallHunter
+            ok_walls, msg_walls, _ = LiquidityWallHunter().evaluate_live(symbol, cur_price)
+            if not ok_walls:
+                return False, msg_walls
+            from src.core.volume_profile import VolumeProfileAnalyzer
+            ok_vp, msg_vp, _ = VolumeProfileAnalyzer().evaluate_entry_edge(cur_price, klines)
+            if not ok_vp:
+                return False, msg_vp
         return True, ""
