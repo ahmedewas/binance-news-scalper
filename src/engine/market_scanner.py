@@ -6,15 +6,9 @@ from src.exchange.base import BaseExchange
 from src.core.regime_detector import MarketRegimeDetector
 from src.core.scoring_engine import ScoringEngine
 from src.core.models import NewsItem
+from src.core.ecosystem_registry import EcosystemRegistry
 
-WATCHLIST = [
-    "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT",
-    "AVAX/USDT", "SUI/USDT", "LINK/USDT", "NEAR/USDT", "FET/USDT", "APT/USDT",
-    "DOT/USDT", "RENDER/USDT", "TAO/USDT", "TIA/USDT", "SEI/USDT", "INJ/USDT",
-    "ATOM/USDT", "OP/USDT", "ARB/USDT", "ALGO/USDT", "POL/USDT", "FTM/USDT",
-    "KAS/USDT", "STX/USDT", "ICP/USDT", "HBAR/USDT", "GRT/USDT", "FIL/USDT",
-    "IMX/USDT", "PYTH/USDT", "JTO/USDT", "VET/USDT", "GALA/USDT",
-]
+WATCHLIST = EcosystemRegistry.get_all_symbols()
 
 
 class MarketScanner:
@@ -54,6 +48,8 @@ class MarketScanner:
                     "symbol": sym, "price": price, "phase": phase.value,
                     "score": score_res.total_score, "approved": score_res.is_approved,
                     "status": "مؤهل للفحص" if score_res.is_approved else score_res.rejection_reason,
+                    "pillar": EcosystemRegistry.get_pillar_for_symbol(sym) or "GENERAL",
+                    "leader": EcosystemRegistry.get_leader_for_symbol(sym) or sym,
                 })
             except Exception:
                 continue
