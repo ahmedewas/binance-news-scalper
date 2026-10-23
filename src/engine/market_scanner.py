@@ -67,7 +67,7 @@ class MarketScanner:
                     title=f"[SPOT FLOW] {r['symbol']} Quantitative Surge | Score {r['score']:.1f}/100",
                     source="binance_spot_flow",
                     symbol=r["symbol"],
-                    sentiment_score=85.0,
+                    sentiment_score=float(r.get("score", 75.0)),
                     published_at=datetime.now(timezone.utc),
                 ))
         return breakouts

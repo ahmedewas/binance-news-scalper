@@ -74,9 +74,11 @@ class PerformanceTracker:
         if "PARTIAL_TP_50" in reason:
             return "💰 جني أرباح جزئي 50% وتأمين نصف رأس المال"
         if "BREAKEVEN_EXIT" in reason:
-            return "🛡️ خروج بحجز التعادل وتغطية الرسوم (+0.6%)"
+            return "🛡️ خروج بحجز التعادل وتغطية الرسوم (+0.2%+)"
+        if "DORMANT" in reason:
+            return "💤 تسييل مبكر (الدقيقة 12) لركود السعر وتوفير السيولة"
         if "TIMEOUT" in reason:
-            return "⏳ خروج زمني بعد 20 دقيقة لعدم تحرك السعر وتحرير الكاش"
+            return "⏳ خروج زمني بعد انتهاء المهلة وتحرير الكاش"
         if "VOLUME_DECAY" in reason:
             return "📉 خروج استباقي بسبب جفاف أحجام التداول (>75%)"
         return reason

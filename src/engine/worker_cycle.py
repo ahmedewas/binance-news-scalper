@@ -59,6 +59,7 @@ class WorkerCycleMixin:
             slot = self.allocator.get_available_slot(alloc['total_slots'], {p.slot_id for p in self.positions.values()})
             if not alloc['can_trade'] or slot < 0 or len(self.positions) >= self.allocator.max_slots:
                 return
+            self.candidates.sort(key=lambda x: getattr(x, "sentiment_score", 0.0), reverse=True)
             while self.candidates:
                 item = self.candidates.pop(0)
                 if item.source == 'binance_spot_flow' and not config.enable_flow_entries:
@@ -66,9 +67,8 @@ class WorkerCycleMixin:
                 if item.symbol in self.positions or self.cooldowns.get(item.symbol, 0) > now:
                     continue
                 opened = OpportunityExecutor.evaluate_and_open(
-                    item, slot, alloc['slot_size'], self.exchange, self.regime_detector,
-                    self.scoring_engine, self.positions, self.latest_news, self.journal,
-                    before_order=self._before_order, after_order=self._after_order
+                    item, slot, alloc['slot_size'], self.exchange, self.regime_detector, self.scoring_engine,
+                    self.positions, self.latest_news, self.journal, before_order=self._before_order, after_order=self._after_order
                 )
                 if opened:
                     self.entry_times.append(now)
@@ -96,5 +96,4 @@ class WorkerCycleMixin:
 
     def shutdown(self):
         self.pool.shutdown(wait=False, cancel_futures=True)
-        with self.lock:
-            self.persist()
+        with self.lock: self.persist()
