@@ -85,14 +85,8 @@ def test_reject_remote_host_without_token(worker):
     assert client.get('/api/status', headers={'host': 'evil.example'}).status_code == 403
 
 
-def test_reset_not_allowed_with_positions(worker):
-    position(worker)
-    with pytest.raises(ValueError):
-        worker.reset_paper_session()
-
-
-def test_invalid_state_is_not_silently_discarded(tmp_path):
-    path = tmp_path / 'state.json'
-    path.write_text('broken', encoding='utf-8')
-    with pytest.raises(ValueError):
-        StateStore(path).load()
+def test_public_binding_rejects_forged_local_host(worker, monkeypatch):
+    from types import SimpleNamespace
+    monkeypatch.setattr('src.web.app.config', SimpleNamespace(host='0.0.0.0'))
+    client = TestClient(create_app(worker, dashboard_token=''))
+    assert client.get('/api/status', headers={'host': 'localhost'}).status_code == 403

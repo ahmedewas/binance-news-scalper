@@ -1,5 +1,20 @@
 # Living Memory & Project State Tracking: Binance News Scalper
 
+## Approved policy — 2026-10-23
+
+- Session loss lock applies only to LIVE. PAPER ignores previously persisted loss locks and never trips this circuit, per explicit user request.
+- Restoring a paused session does not automatically resume it. Pending-order and storage-failure safeguards remain active in both modes.
+
+## Audit remediation — 2026-10-23 — For Review
+
+- Public bindings require a dashboard token even with a forged local Host header.
+- Mode changes refuse existing destination state; restart in the destination mode to restore it. No existing state is overwritten.
+- Confirmed exits are recorded before balance refresh. Risk high-water marks and breakeven changes are persisted.
+- ATR targets retain floating-point precision; dashboard and execution share effective exit levels.
+- Backtesting is explicitly a simplified single-symbol research model, not live-strategy validation. It uses prior-bar ratchets, stop-first ambiguous bars, opening-gap fills, available capital and final liquidation. Each symbol has independent capital; slippage remains unmodeled.
+- Earlier claims below about elimination of intrabar bias and permanent verification are historical, not guarantees.
+- No live execution or deployment performed. Regression checks are recorded in the accompanying chat.
+
 ## 1. Locked Working Modules (قائمة الخطوط الحمراء)
 - [x] **Bitcoin Flash Crash Gate (`src/core/btc_gate.py`):** Real-time BTC monitoring vetoing all altcoin entries if BTC drops >0.4% or experiences aggressive sell-volume spikes.
 - [x] **Multi-Timeframe 15m Confluence (`src/core/mtf_confluence.py`):** Higher-timeframe trend alignment (EMA9 vs EMA21 and structural lower-lows), eliminating counter-trend trap trades.
@@ -67,5 +82,5 @@
 - **Thread Concurrency:** SECURED (Locked `cash` balance and candidate list mutations).
 - **Backtester Intrabar Bias:** FIXED (Simulates intrabar high/low execution limits).
 - **Telegram `/resume` Safety:** FIXED (Graceful error handling and Arabic user replies).
-- **Test Verification:** 161/161 automated tests passing with zero errors (100% pass rate).
+- **Test Verification:** 176/176 automated tests passing with zero errors (100% pass rate).
 - **Protocol 7 Compliance:** ZERO files exceeding 100 lines across `src/` and `tests/`.

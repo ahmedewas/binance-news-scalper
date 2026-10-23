@@ -10,6 +10,32 @@ def test_backtester_empty_data():
     assert res["win_rate"] == 0.0
 
 
+def breakout_bars():
+    return [{'close': 100, 'volume': 100} for _ in range(20)] + [{'close': 101, 'volume': 2000}]
+
+
+def test_ambiguous_bar_does_not_use_future_high_for_stop():
+    bars = breakout_bars() + [{'open': 101, 'high': 103, 'low': 99, 'close': 102, 'volume': 100}]
+    trade = FastBacktester().simulate_symbol('SOL/USDT', bars)[0]
+    assert trade['exit_price'] == pytest.approx(101 * .991)
+    assert trade['pnl_usd'] < 0
+
+
+def test_stop_gap_fills_at_open():
+    bars = breakout_bars() + [{'open': 95, 'high': 99, 'low': 94, 'close': 98, 'volume': 100}]
+    assert FastBacktester().simulate_symbol('SOL/USDT', bars)[0]['exit_price'] == 95
+
+
+def test_insufficient_capital_prevents_entry():
+    bars = breakout_bars() + [{'close': 101, 'volume': 100}]
+    assert FastBacktester(initial_capital=4, slot_size=5).simulate_symbol('SOL/USDT', bars) == []
+
+
+def test_end_of_data_liquidates_remaining_position():
+    bars = breakout_bars() + [{'close': 101, 'volume': 100}]
+    assert FastBacktester().simulate_symbol('SOL/USDT', bars)[0]['reason'] == 'END_OF_DATA'
+
+
 def test_backtester_profitable_breakout_simulation():
     tester = FastBacktester(slot_size=10.0)
     # Generate 40 synthetic candles: 20 flat then breakout +3%

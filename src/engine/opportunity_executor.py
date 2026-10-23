@@ -67,8 +67,8 @@ class OpportunityExecutor:
         order = exchange.place_market_buy(item.symbol, slot_size, **({"client_order_id": client_id} if client_id else {}))
         if order.success and order.price > 0 and order.amount > 0:
             tp_pct, sl_pct, _ = ATRCalculator().calculate_targets(order.price, klines)
-            target_tp = round(order.price * (1.0 + tp_pct), 4)
-            stop_loss = round(order.price * (1.0 - sl_pct), 4)
+            target_tp = order.price * (1.0 + tp_pct)
+            stop_loss = order.price * (1.0 - sl_pct)
             positions[item.symbol] = Position(
                 symbol=item.symbol, entry_price=order.price, current_price=order.price,
                 amount=order.amount, highest_price=order.price, entry_time=now, slot_id=slot_id,

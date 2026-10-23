@@ -50,7 +50,7 @@ class WorkerState:
         self.pending_orders = state.get('pending_orders', {})
         self.cooldowns = state.get('cooldowns', {})
         self.entry_times = state.get('entry_times', [])
-        self.loss_limit_hit = state.get('loss_limit_hit', False)
+        self.loss_limit_hit = self.mode == 'LIVE' and state.get('loss_limit_hit', False)
         self.tracker.initial_balance = state['initial_balance']
         self.tracker.start_time = datetime.fromisoformat(state['start_time'])
         self.tracker.trades = [{**t, 'timestamp': datetime.fromisoformat(t['timestamp'])}

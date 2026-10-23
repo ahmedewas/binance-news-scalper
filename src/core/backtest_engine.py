@@ -12,8 +12,13 @@ class FastBacktester:
         self, symbol: str, klines: List[Dict[str, Any]],
         min_score: float = 75.0, sl_pct: float = 0.009, tp_pct: float = 0.012
     ) -> List[Dict[str, Any]]:
-        """Simulates entries and ladder exits on historical 1m klines."""
+        """Simplified single-symbol research model, not the live strategy.
+
+        Stops use prior-bar highs; ambiguous bars take the stop first.
+        Each call has independent capital. Slippage is not modeled.
+        """
         trades = []
+        capital = self.initial_capital
         in_pos = False
         entry_p, highest_p, entry_i = 0.0, 0.0, 0
 
@@ -26,12 +31,11 @@ class FastBacktester:
                 ret_5m = (c - float(klines[i-5]["close"])) / float(klines[i-5]["close"]) if float(klines[i-5]["close"]) > 0 else 0.0
                 score = min(100.0, (c_vol / max(1e-6, avg_v)) * 30.0 + (ret_5m * 1000.0) + 40.0)
 
-                if score >= min_score and ret_5m > 0.002:
+                if score >= min_score and ret_5m > 0.002 and capital >= self.slot_size and i < len(klines) - 1:
                     in_pos, entry_p, highest_p, entry_i = True, c, c, i
             else:
                 bar_high = float(klines[i].get("high", c))
                 bar_low = float(klines[i].get("low", c))
-                highest_p = max(highest_p, bar_high)
                 gain_high = (highest_p - entry_p) / entry_p
                 gain_low = (bar_low - entry_p) / entry_p
                 elapsed = i - entry_i
@@ -50,17 +54,21 @@ class FastBacktester:
 
                 if gain_low <= stop_pct:
                     should_exit, reason = True, "STOP_OR_RATCHET"
-                    exit_price = round(entry_p * (1.0 + stop_pct), 6)
-                elif gain_high >= tp_pct:
+                    exit_price = min(float(klines[i].get("open", entry_p * (1.0 + stop_pct))), entry_p * (1.0 + stop_pct))
+                elif bar_high >= entry_p * (1 + tp_pct):
                     should_exit, reason = True, "TAKE_PROFIT"
-                    exit_price = round(entry_p * (1.0 + tp_pct), 6)
+                    exit_price = entry_p * (1.0 + tp_pct)
                 elif elapsed >= 20:
                     should_exit, reason = True, "TIMEOUT"
                     exit_price = c
 
+                if not should_exit and i == len(klines) - 1:
+                    should_exit, reason = True, "END_OF_DATA"
+                highest_p = max(highest_p, bar_high)
                 if should_exit:
                     actual_gain = (exit_price - entry_p) / entry_p
                     net_pnl = (actual_gain - (self.fee_rate * 2)) * self.slot_size
+                    capital += net_pnl
                     trades.append({
                         "symbol": symbol, "entry_price": entry_p, "exit_price": exit_price,
                         "pnl_usd": round(net_pnl, 4), "pnl_pct": round(actual_gain * 100, 2),

@@ -17,7 +17,10 @@ class WorkerCycleMixin:
                     self.stale_symbols.add(sym)
                     continue
                 now = datetime.now(timezone.utc)
+                previous_risk = (pos.highest_price, pos.is_breakeven_locked)
                 should_exit, reason, ratio = self.risk_manager.evaluate_exit(pos, price, now)
+                if previous_risk != (pos.highest_price, pos.is_breakeven_locked):
+                    self.persist()
                 if not should_exit and config.enable_volume_decay_exit and pos.entry_volume > 0:
                     elapsed = (now - pos.entry_time).total_seconds() / 60
                     if elapsed >= self.volume_decay_detector.min_elapsed:

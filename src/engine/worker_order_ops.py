@@ -36,13 +36,13 @@ class WorkerOrderOpsMixin:
             self.error(result['message'])
         else:
             self.pending_orders.pop(cid, None)
-        self.cash = self.exchange.get_balance('USDT')
         if result.get('trade'):
             self._record(result['trade'])
         else:
             self.persist()
             if not result['success']:
                 self.error(result['message'])
+        self.cash = self.exchange.get_balance('USDT')
         return result
 
     def close_position(self, symbol: str) -> dict:
@@ -86,7 +86,6 @@ class WorkerOrderOpsMixin:
                         results.append(dict(id=cid, success=False, message=result['message']))
                         continue
                     self.pending_orders.pop(cid, None)
-                    self.cash = self.exchange.get_balance('USDT')
                     self._record(result['trade'])
                 elif sym in self.positions:
                     self.positions[sym].execution_uncertain = False

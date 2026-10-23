@@ -36,10 +36,14 @@ class OpportunityFilters:
     @staticmethod
     def calculate_alpha_metrics(klines: List[Dict[str, Any]]) -> Tuple[Optional[float], Optional[float]]:
         """Computes Hurst Exponent fractal persistence and CVD order flow delta."""
-        closes = [float(k.get("close", 0.0)) for k in klines]
-        ok_h, h_score, _ = HurstFilter().validate_market_regime(closes)
-        cvd_score, _ = CVDTracker().evaluate_order_flow(klines)
-        return (h_score if ok_h else 0.0), cvd_score
+        try:
+            closes = [float(k.get("close", 0.0)) for k in klines]
+            ok_h, h_score, _ = HurstFilter().validate_market_regime(closes)
+            cvd_score, _ = CVDTracker().evaluate_order_flow(klines)
+            eff_hurst = h_score if ok_h else None
+            return eff_hurst, cvd_score
+        except Exception:
+            return None, 50.0
 
     @staticmethod
     def check_microstructure(symbol: str, klines: List[Dict[str, Any]], cur_price: float) -> Tuple[bool, str]:

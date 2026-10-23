@@ -4,14 +4,12 @@ from src.core.cvd_tracker import CVDTracker
 
 def test_cvd_buyer_dominance():
     tracker = CVDTracker(min_imbalance_ratio=0.30)
-    # 5 trades: 4 aggressive buys (is_buyer_maker=False), 1 sell (is_buyer_maker=True)
     trades = [
         {"amount": 10.0, "is_buyer_maker": False},
         {"amount": 15.0, "is_buyer_maker": False},
         {"amount": 20.0, "is_buyer_maker": False},
         {"amount": 5.0, "is_buyer_maker": True},
     ]
-    # Buy: 45, Sell: 5, Total: 50, Imbalance: (45-5)/50 = 0.80 (80%)
     valid, score, reason = tracker.validate_whale_pressure(trades)
     assert valid
     assert score >= 70.0
@@ -24,7 +22,6 @@ def test_cvd_seller_rejection():
         {"amount": 5.0, "is_buyer_maker": False},
         {"amount": 45.0, "is_buyer_maker": True},
     ]
-    # Buy: 5, Sell: 45, Total: 50, Imbalance = (5-45)/50 = -0.80 (-80%)
     valid, score, reason = tracker.validate_whale_pressure(trades)
     assert not valid
     assert score == 0.0
@@ -36,3 +33,18 @@ def test_cvd_empty_trades():
     valid, score, reason = tracker.validate_whale_pressure([])
     assert not valid
     assert "No trade flow data" in reason
+
+
+def test_cvd_evaluate_order_flow_candles():
+    tracker = CVDTracker()
+    klines = [
+        {"open": 10.0, "close": 10.5, "volume": 100.0},
+        {"open": 10.5, "close": 11.0, "volume": 200.0},
+        {"open": 11.0, "close": 10.8, "volume": 50.0},
+    ]
+    score, reason = tracker.evaluate_order_flow(klines)
+    assert score > 50.0
+    assert "CVD Imbalance" in reason
+
+    score_empty, _ = tracker.evaluate_order_flow([])
+    assert score_empty == 50.0

@@ -28,11 +28,12 @@ function controls() {
     const unavailable = busy || !state || Date.now() - lastSuccess > 15000;
     document.querySelectorAll('[data-mutation]').forEach(b => b.disabled = unavailable);
     $('pause-btn').disabled = unavailable || !state?.is_active;
-    $('resume-btn').disabled = unavailable || !!state?.is_active || !!state?.health?.loss_limit_hit || pendingCount(state)>0;
+    const isLiveLossBlocked = state?.mode === 'LIVE' && Boolean(state?.health?.loss_limit_hit);
+    $('resume-btn').disabled = unavailable || !!state?.is_active || isLiveLossBlocked || pendingCount(state)>0;
     $('reconcile-btn').disabled = unavailable || !pendingCount(state);
     $('reset-btn').disabled = unavailable || state?.mode !== 'PAPER' || array(state?.open_positions).length>0 || pendingCount(state)>0;
-    if ($('mode-paper-btn')) $('mode-paper-btn').disabled = unavailable || state?.mode === 'PAPER' || array(state?.open_positions).length>0 || pendingCount(state)>0;
-    if ($('mode-live-btn')) $('mode-live-btn').disabled = unavailable || state?.mode === 'LIVE' || array(state?.open_positions).length>0 || pendingCount(state)>0;
+    if ($('mode-paper-btn')) $('mode-paper-btn').disabled = unavailable || (state?.mode === 'PAPER' && state?.is_active) || array(state?.open_positions).length>0 || pendingCount(state)>0;
+    if ($('mode-live-btn')) $('mode-live-btn').disabled = unavailable || (state?.mode === 'LIVE' && state?.is_active) || array(state?.open_positions).length>0 || pendingCount(state)>0;
     $('emergency-btn').disabled = unavailable;
     $('csv-btn').disabled = !array(state?.trade_history).length;
 }
@@ -60,7 +61,7 @@ function render(d) {
     $('slots').textContent = `الخانات ${positions.length}/${d.allocation?.total_slots ?? '—'} · ${money(d.allocation?.slot_size)} للخانة`;
     $('pending').textContent = `أوامر قيد المعالجة: ${pendingCount(d)}`;
     renderPositions(positions); renderRadar();
-    details('health-box',[['آخر دورة',health.last_step],['آخر فحص',health.last_scan],['الأخطاء',array(health.errors).length],['آخر خطأ',health.last_error || 'لا يوجد'],['الأسعار',stalePrices(d)?'قديمة — يلزم الانتباه':'لا توجد أسعار مراكز متقادمة'],['حد خسارة الجلسة',health.loss_limit_hit?'تم بلوغه — الدخول محظور':'لم يُبلغ']]);
+    details('health-box',[['آخر دورة',health.last_step],['آخر فحص',health.last_scan],['الأخطاء',array(health.errors).length],['آخر خطأ',health.last_error || 'لا يوجد'],['الأسعار',stalePrices(d)?'قديمة — يلزم الانتباه':'لا توجد أسعار مراكز متقادمة'],['حد خسارة الجلسة',d.mode === 'PAPER'?'معطّل في المحاكاة':health.loss_limit_hit?'تم بلوغه — الدخول محظور':'لم يُبلغ']]);
     const names = {take_profit_pct:'هدف الربح %',stop_loss_pct:'وقف الخسارة %',max_hold_minutes:'مدة الاحتفاظ القصوى',min_score:'أقل تقييم',max_positions:'أقصى صفقات',max_slots:'أقصى عدد مراكز',trailing_tp_pct:'تفعيل تتبع الربح',timeout_minutes:'مهلة المركز بالدقائق',max_session_loss_pct:'حد خسارة الجلسة',enable_flow_entries:'دخول التدفق التجريبي',enable_volume_decay_exit:'خروج الحجم التجريبي',max_entries_per_hour:'أقصى دخولات في الساعة',symbol_cooldown_minutes:'فاصل إعادة دخول العملة بالدقائق',scan_interval:'فاصل الفحص'};
     details('settings-box',Object.entries(d.settings || {}).filter(([k])=>!/token|secret|password|key/i.test(k)).map(([k,v])=>[names[k]||k,typeof v==='boolean'?(v?'مفعّل':'معطّل'):k.endsWith('_pct')?`${num(Number(v)*100)}%`:typeof v==='object'?JSON.stringify(v):v]));
     $('hist-box').innerHTML = table(['العملة','الدخول','الخروج','الربح USDT','الربح %','المدة / د','الوقت','سبب الخروج'],history.slice().reverse().map(t=>[t.symbol,num(t.entry_price,8),num(t.exit_price,8),num(t.pnl_usd),num(t.pnl_pct),num(t.duration_mins,1),t.timestamp,t.reason_arabic||t.reason]),'لا توجد صفقات مغلقة بعد');
@@ -103,7 +104,7 @@ $('connect-form').addEventListener('submit',async e=>{e.preventDefault(); if(sta
 $('refresh-btn').addEventListener('click',refresh);
 $('reconcile-btn').addEventListener('click',()=>mutate('/api/reconcile',{}));
 $('reset-btn').addEventListener('click',()=>{if(confirm('بدء جلسة ورقية جديدة؟ سيُؤرشف سجل الجلسة الحالية ويُعاد الرصيد الورقي إلى القيمة الابتدائية. تظل الدخولات متوقفة حتى تستأنفها.'))mutate('/api/paper/reset',{confirmation:'RESET PAPER'});});
-$('mode-paper-btn')?.addEventListener('click',()=>{if(confirm('التحويل إلى وضع المحاكاة الورقية (PAPER)؟ سيتم بدء محاكاة آمنة.'))mutate('/api/mode',{mode:'PAPER'});});
+$('mode-paper-btn')?.addEventListener('click',()=>{if(confirm('بدء المحاكاة الورقية (PAPER) وتفعيل البحث عن الصفقات؟'))mutate('/api/mode',{mode:'PAPER'});});
 $('mode-live-btn')?.addEventListener('click',()=>{if(confirm('تنبيه هام: التحويل إلى وضع التداول الحقيقي (LIVE) بأموال حقيقية على بينانس؟ تأكد من إدخال مفاتيح API الخاصة بك.'))mutate('/api/mode',{mode:'LIVE'});});
 $('pause-btn').addEventListener('click',()=>mutate('/api/active',{active:false}));
 $('resume-btn').addEventListener('click',()=>mutate('/api/active',{active:true}));

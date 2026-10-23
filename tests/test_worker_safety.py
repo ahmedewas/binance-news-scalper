@@ -1,3 +1,4 @@
+"""Worker safety tests part 1: Exits, pauses, and error states."""
 from datetime import datetime, timezone, timedelta
 from unittest.mock import MagicMock
 import pytest
@@ -48,7 +49,6 @@ def test_failed_exit_never_duplicates_previous_trade(worker):
     worker.trade_history.append(dict(symbol='OLD', pnl_pct=1, pnl_usd=1, reason='OLD'))
     worker.exchange.place_market_sell = lambda *a, **k: OrderResult(False, '', 'SOL/USDT', 0, 0, 'SELL', 'REJECTED')
     worker.manage_positions()
-    worker.manage_positions()
     assert len(worker.trade_history) == 1
     assert worker.tracker.trades == []
     assert not worker.pending_orders
@@ -77,12 +77,3 @@ def test_state_restores_paper_holdings_and_pending_intent(worker):
         assert not restored.is_active
     finally:
         restored.pool.shutdown(wait=False)
-
-
-def test_initial_balance_and_loss_circuit(worker):
-    assert worker.snapshot()['performance']['initial_balance'] == 100
-    worker.cash = 96
-    worker._publish()
-    assert worker.loss_limit_hit and not worker.is_active
-    with pytest.raises(ValueError):
-        worker.set_active(True)

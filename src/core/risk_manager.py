@@ -23,6 +23,21 @@ class RiskManager:
         self.fee_coverage_pct = fee_coverage_pct
         self.stage1_tp_pct = stage1_tp_pct
 
+    def exit_levels(self, position: Position):
+        stage = self.stage1_tp_pct
+        if position.target_tp > position.entry_price:
+            stage = max(0.008, (position.target_tp - position.entry_price) / position.entry_price)
+        base = self.stop_loss_pct
+        if 0 < position.stop_loss < position.entry_price:
+            base = max(0.005, (position.entry_price - position.stop_loss) / position.entry_price)
+        gain = (position.highest_price - position.entry_price) / position.entry_price
+        locked = (0.024 if gain >= 0.030 else 0.015 if gain >= 0.020 else
+                  0.008 if gain >= stage else self.fee_coverage_pct if position.is_breakeven_locked else -base)
+        stop = position.entry_price * (1 + locked)
+        if position.highest_price >= position.entry_price * (1 + self.trailing_tp_pct):
+            stop = max(stop, position.highest_price * (1 - self.trailing_offset_pct))
+        return position.entry_price * (1 + stage), stop, locked
+
     def evaluate_exit(
         self, position: Position, current_price: float, now: Optional[datetime] = None
     ) -> Tuple[bool, str, float]:
@@ -38,33 +53,10 @@ class RiskManager:
         if gain_high >= self.breakeven_trigger_pct:
             position.is_breakeven_locked = True
 
-        stage1_tp = self.stage1_tp_pct
-        if position.target_tp > position.entry_price:
-            stage1_tp = max(0.008, (position.target_tp - position.entry_price) / position.entry_price)
-
-        if not position.partial_tp_done and current_price >= position.entry_price * (1.0 + stage1_tp):
+        target, stop_price, locked_stop_pct = self.exit_levels(position)
+        if not position.partial_tp_done and current_price >= target:
             pnl = (current_price - position.entry_price) / position.entry_price
             return True, f"PARTIAL_TP_50 (Secured 50% gain: +{pnl*100:.2f}%)", 0.5
-
-        base_sl = self.stop_loss_pct
-        if 0 < position.stop_loss < position.entry_price:
-            base_sl = max(0.005, (position.entry_price - position.stop_loss) / position.entry_price)
-
-        locked_stop_pct = -base_sl
-        if gain_high >= 0.030:
-            locked_stop_pct = 0.024
-        elif gain_high >= 0.020:
-            locked_stop_pct = 0.015
-        elif gain_high >= stage1_tp:
-            locked_stop_pct = 0.008
-        elif position.is_breakeven_locked:
-            locked_stop_pct = self.fee_coverage_pct
-
-        stop_price = position.entry_price * (1.0 + locked_stop_pct)
-        if position.highest_price >= position.entry_price * (1.0 + self.trailing_tp_pct):
-            trailing_stop = position.highest_price * (1.0 - self.trailing_offset_pct)
-            if trailing_stop > stop_price:
-                stop_price = trailing_stop
 
         if current_price <= stop_price:
             if position.is_breakeven_locked and stop_price > position.entry_price:

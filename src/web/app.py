@@ -22,7 +22,7 @@ def create_app(worker, dashboard_token=None):
                 supplied = request.headers.get("X-Dashboard-Token", "")
                 if not secrets.compare_digest(supplied.encode(), token.encode()):
                     return JSONResponse({"detail": "أدخل رمز لوحة التحكم الصحيح"}, status_code=401)
-            elif request.url.hostname not in {"127.0.0.1", "localhost", "::1", "testserver"}:
+            elif getattr(config, "host", "127.0.0.1") not in {"127.0.0.1", "localhost", "::1"} or request.url.hostname not in {"127.0.0.1", "localhost", "::1", "testserver"}:
                 return JSONResponse({"detail": "الوصول عن بعد يحتاج DASHBOARD_TOKEN"}, status_code=403)
             if request.method == "POST":
                 if request.headers.get("X-Requested-With") != "ScalperDashboard":
@@ -36,12 +36,10 @@ def create_app(worker, dashboard_token=None):
         return response
 
     @app.get("/")
-    def index():
-        return FileResponse(static_dir / "index.html")
+    def index(): return FileResponse(static_dir / "index.html")
 
     @app.get("/api/status")
-    def status():
-        return worker.snapshot()
+    def status(): return worker.snapshot()
 
     @app.post("/api/active")
     def active(payload: ActiveRequest):
@@ -68,12 +66,10 @@ def create_app(worker, dashboard_token=None):
         return res if res["success"] else JSONResponse({"detail": res["message"], **res}, status_code=409)
 
     @app.post("/api/close_all")
-    def close_all():
-        return worker.close_all()
+    def close_all(): return worker.close_all()
 
     @app.post("/api/reconcile")
-    def reconcile():
-        return worker.reconcile_pending()
+    def reconcile(): return worker.reconcile_pending()
 
     @app.post("/api/paper/reset")
     def reset(payload: ResetRequest):
@@ -85,8 +81,7 @@ def create_app(worker, dashboard_token=None):
             raise HTTPException(409, str(exc)) from exc
 
     @app.get("/api/journal")
-    def journal():
-        return {"journal": worker.journal.read_journal()}
+    def journal(): return {"journal": worker.journal.read_journal()}
 
     @app.get("/api/autopsy")
     def autopsy():
@@ -94,7 +89,6 @@ def create_app(worker, dashboard_token=None):
         return SessionAutopsy.analyze_session(getattr(worker, "trade_history", []))
 
     @app.get("/healthz")
-    def health():
-        return {"status": "running", "last_step": worker.snapshot().get("health", {}).get("last_step")}
+    def health(): return {"status": "running", "last_step": worker.snapshot().get("health", {}).get("last_step")}
 
     return app

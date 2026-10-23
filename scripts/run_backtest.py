@@ -9,7 +9,8 @@ from src.core.backtest_engine import FastBacktester
 
 def run_quick_audit():
     print("==================================================")
-    print("FAST QUANTITATIVE BACKTESTER & PARAMETER AUDIT")
+    print("SIMPLIFIED RESEARCH MODEL - NOT LIVE STRATEGY VALIDATION")
+    print("Independent capital per symbol; aggregate is not a shared portfolio. No slippage model.")
     print("==================================================")
     exchange = PaperExchange()
     tester = FastBacktester()

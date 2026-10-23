@@ -8,7 +8,9 @@ class WorkerSnapshotMixin:
     def _publish(self):
         now = datetime.now(timezone.utc)
         equity = self.cash + sum(p.amount * p.current_price for p in self.positions.values())
-        if equity <= self.tracker.initial_balance * (1 - config.max_session_loss_pct):
+        if self.mode == 'PAPER':
+            self.loss_limit_hit = False
+        elif self.mode == 'LIVE' and equity <= self.tracker.initial_balance * (1 - config.max_session_loss_pct):
             self.loss_limit_hit = True
             self.is_active = False
 
@@ -16,17 +18,13 @@ class WorkerSnapshotMixin:
         for p in self.positions.values():
             elapsed = (now - p.entry_time).total_seconds() / 60
             basis = p.cost_basis or p.entry_price * p.amount
-            stop = p.entry_price * (1 - self.risk_manager.stop_loss_pct)
-            if p.is_breakeven_locked:
-                stop = p.entry_price * (1 + self.risk_manager.fee_coverage_pct)
-            if p.highest_price >= p.entry_price * (1 + self.risk_manager.trailing_tp_pct):
-                stop = max(stop, p.highest_price * (1 - self.risk_manager.trailing_offset_pct))
             pnl = p.current_price * p.amount - basis
+            target, stop, _ = self.risk_manager.exit_levels(p)
             rows.append(dict(
                 symbol=p.symbol, entry_price=p.entry_price, current_price=p.current_price,
                 amount=p.amount, cost_basis=basis, pnl_usd=round(pnl, 8), pnl_pct=round(pnl / basis * 100, 4),
                 highest_price=p.highest_price, stop_loss=stop,
-                target_tp=p.entry_price * (1 + self.risk_manager.stage1_tp_pct),
+                target_tp=target,
                 is_breakeven_locked=p.is_breakeven_locked, partial_tp_done=p.partial_tp_done,
                 elapsed_mins=round(elapsed, 1), remaining_mins=max(0, round(self.risk_manager.timeout_minutes - elapsed, 1)),
                 slot_id=p.slot_id, execution_uncertain=p.execution_uncertain,

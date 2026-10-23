@@ -9,7 +9,9 @@ from src.core.state_store import StateStore
 class WorkerAdminMixin:
     def set_active(self, active: bool) -> dict:
         with self.lock:
-            if active and (self.pending_orders or self.storage_failed or self.loss_limit_hit):
+            if self.mode == 'PAPER':
+                self.loss_limit_hit = False
+            if active and (self.pending_orders or self.storage_failed or (self.mode == 'LIVE' and self.loss_limit_hit)):
                 raise ValueError('التشغيل محظور: أمر غير محسوم أو عطل حفظ أو تجاوز حد خسارة الجلسة')
             if active and self.mode == 'LIVE':
                 for p in self.positions.values():
@@ -28,14 +30,19 @@ class WorkerAdminMixin:
                 raise ValueError('نمط التداول يجب أن يكون إما PAPER أو LIVE')
             if self.positions or self.pending_orders:
                 raise ValueError('يجب إغلاق كافة الصفقات وتسوية الأوامر المعلقة قبل تغيير نمط التداول')
+            if self.store:
+                dest_path = self.store.path.parent / f"state-{mode_upper.lower()}.json"
+                if dest_path.resolve() != self.store.path.resolve() and StateStore(dest_path).load():
+                    raise ValueError('توجد حالة محفوظة للوضع المطلوب؛ أعد تشغيل البرنامج بهذا الوضع لاستعادتها بأمان')
             if mode_upper == 'LIVE':
                 if not (config.api_key and config.api_secret):
                     raise ValueError('مفاتيح بينانس API غير مدخلة في الإعدادات؛ لا يمكن بدء التداول الحقيقي')
                 from src.exchange.live import LiveExchange
-                self.exchange = LiveExchange(config.api_key, config.api_secret)
+                exchange = LiveExchange(config.api_key, config.api_secret)
             else:
                 from src.exchange.paper import PaperExchange
-                self.exchange = PaperExchange(config.initial_paper_balance)
+                exchange = PaperExchange(config.initial_paper_balance)
+            self.exchange = exchange
             self.exchange._cooldown_mgr = getattr(self, "cooldown_mgr", None)
             self.exchange._notifier = getattr(self, "notifier", None)
             if self.store:
@@ -43,7 +50,9 @@ class WorkerAdminMixin:
             self.mode = mode_upper
             self.cash = float(self.exchange.get_balance('USDT'))
             self.tracker = PerformanceTracker(self.cash)
+            self.loss_limit_hit = False
             self.is_active = True
+            self.last_error = ''
             self.persist()
             self._publish()
             return {'mode': self.mode, 'is_active': self.is_active, 'balance': self.cash}
