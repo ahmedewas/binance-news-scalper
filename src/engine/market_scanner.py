@@ -1,14 +1,13 @@
-"""Market scanner inspecting top 24 Halal Spot pairs and computing live scores."""
+"""Market scanner inspecting dynamic liquid Binance pairs and computing live scores."""
 import time
 from datetime import datetime, timezone
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from src.exchange.base import BaseExchange
 from src.core.regime_detector import MarketRegimeDetector
 from src.core.scoring_engine import ScoringEngine
 from src.core.models import NewsItem
 from src.core.ecosystem_registry import EcosystemRegistry
-
-WATCHLIST = EcosystemRegistry.get_all_symbols()
+from src.engine.universe_manager import UniverseManager
 
 
 class MarketScanner:
@@ -17,10 +16,12 @@ class MarketScanner:
         exchange: BaseExchange,
         regime_detector: MarketRegimeDetector,
         scoring_engine: ScoringEngine,
+        universe_manager: Optional[UniverseManager] = None,
     ):
         self.exchange = exchange
         self.regime_detector = regime_detector
         self.scoring_engine = scoring_engine
+        self.universe_manager = universe_manager or UniverseManager()
         self._last_scan_time = 0.0
         self.cached_results: List[Dict[str, Any]] = []
         self.last_completed_at = None
@@ -31,8 +32,9 @@ class MarketScanner:
             return self.cached_results
 
         self._last_scan_time = now
+        symbols = self.universe_manager.get_symbols()
         results = []
-        for sym in WATCHLIST:
+        for sym in symbols:
             try:
                 price = self.exchange.get_ticker_price(sym)
                 klines = self.exchange.get_historical_klines(sym, "1m", 40)
@@ -58,16 +60,5 @@ class MarketScanner:
         self.last_completed_at = datetime.now(timezone.utc).isoformat()
         return results
 
-    def find_breakouts(self) -> List[NewsItem]:
-        breakouts = []
-        for r in self.scan_if_needed(interval_seconds=15.0):
-            if r.get("approved"):
-                breakouts.append(NewsItem(
-                    news_id=f"spot_breakout_{r['symbol']}_{int(time.time()//60)}",
-                    title=f"[SPOT FLOW] {r['symbol']} Quantitative Surge | Score {r['score']:.1f}/100",
-                    source="binance_spot_flow",
-                    symbol=r["symbol"],
-                    sentiment_score=float(r.get("score", 75.0)),
-                    published_at=datetime.now(timezone.utc),
-                ))
-        return breakouts
+    def get_market_radar(self) -> List[Dict[str, Any]]:
+        return self.cached_results

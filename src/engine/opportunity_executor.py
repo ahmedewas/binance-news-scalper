@@ -52,7 +52,7 @@ class OpportunityExecutor:
             return False
 
         cur_p = exchange.get_ticker_price(item.symbol)
-        ok_micro, micro_msg = OpportunityFilters.check_microstructure(item.symbol, klines, cur_p)
+        ok_micro, micro_msg = OpportunityFilters.check_microstructure(item.symbol, klines, cur_p, exchange=exchange)
         if not ok_micro:
             entry.update(approved=False, reason=micro_msg)
             return False

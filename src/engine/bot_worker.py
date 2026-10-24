@@ -9,6 +9,10 @@ from src.core.cooldown_manager import CooldownManager
 from src.core.performance_tracker import PerformanceTracker
 from src.core.telegram_notifier import TelegramNotifier
 from src.core.volume_decay_exit import VolumeDecayExitDetector
+from src.core.vector_memory import VectorMemoryBuffer
+from src.core.shadow_engine import ShadowEngine
+from src.core.genetic_optimizer import GeneticOptimizer
+from src.core.meta_critic import MetaCritic
 from src.engine.worker_admin import WorkerAdminMixin
 from src.engine.worker_cycle import WorkerCycleMixin
 from src.engine.worker_order_ops import WorkerOrderOpsMixin
@@ -36,10 +40,18 @@ class BotWorker(WorkerSnapshotMixin, WorkerOrderOpsMixin, WorkerCycleMixin, Work
         self.tracker = PerformanceTracker(max(self.cash, 0.01))
         self.journal = journal if journal is not None else AuditJournal()
         self.volume_decay_detector = VolumeDecayExitDetector(min_retention_ratio=0.10, min_elapsed_minutes=14.0)
-        self.cooldown_mgr = CooldownManager(default_cooldown_minutes=15.0)
+        self.cooldown_mgr = CooldownManager(default_cooldown_minutes=10.0)
         self.exchange._cooldown_mgr = self.cooldown_mgr
         self.notifier = TelegramNotifier(getattr(config, "telegram_bot_token", None), getattr(config, "telegram_chat_id", None))
         self.exchange._notifier = self.notifier
+        self.vector_memory = VectorMemoryBuffer()
+        self.shadow_engine = ShadowEngine()
+        self.genetic_optimizer = GeneticOptimizer()
+        self.meta_critic = MetaCritic()
+        self.exchange._vector_memory = self.vector_memory
+        self.exchange._shadow_engine = self.shadow_engine
+        self.exchange._meta_critic = self.meta_critic
+        self.exchange._genetic_optimizer = self.genetic_optimizer
         self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix='market-data')
         self.news_future = None
         self.last_news_poll = 0.0
@@ -56,6 +68,10 @@ class BotWorker(WorkerSnapshotMixin, WorkerOrderOpsMixin, WorkerCycleMixin, Work
     def _record(self, trade: dict) -> None:
         self.tracker.record_trade(trade['symbol'], trade['pnl_pct'], trade['pnl_usd'], trade['reason'])
         self.cooldowns[trade['symbol']] = time.time() + config.symbol_cooldown_minutes * 60
+        self.vector_memory.record_experience([0.6, 1.0, 0.2, 0.6, 0.8], won=(trade.get('pnl_usd', 0) > 0))
+        self.shadow_engine.evaluate_regret(trade['symbol'], trade.get('pnl_pct', 0.0))
+        self.genetic_optimizer.record_outcome(trade.get('pnl_pct', 0.0))
+        self.meta_critic.reflect_on_history(self.trade_history)
         self.persist()
         try:
             self.journal.log_trade_closed(trade, self.cash)

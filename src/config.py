@@ -12,17 +12,17 @@ class AppConfig:
     api_key: str = os.getenv("BINANCE_API_KEY", "")
     api_secret: str = os.getenv("BINANCE_API_SECRET", "")
     min_notional: float = float(os.getenv("MIN_NOTIONAL", "5.0"))
-    max_slots: int = int(os.getenv("MAX_SLOTS", "5"))
+    max_slots: int = int(os.getenv("MAX_SLOTS", "15"))
     initial_paper_balance: float = float(
-        os.getenv("INITIAL_PAPER_BALANCE", "15.0")
+        os.getenv("INITIAL_PAPER_BALANCE", "500.0")
     )
-    trailing_tp_pct: float = float(os.getenv("TRAILING_TP_PCT", "0.020"))
+    trailing_tp_pct: float = float(os.getenv("TRAILING_TP_PCT", "0.012"))
     trailing_offset_pct: float = float(
-        os.getenv("TRAILING_OFFSET_PCT", "0.005")
+        os.getenv("TRAILING_OFFSET_PCT", "0.003")
     )
-    stop_loss_pct: float = float(os.getenv("STOP_LOSS_PCT", "0.009"))
-    timeout_minutes: int = int(os.getenv("TIMEOUT_MINUTES", "60"))
-    min_score: float = float(os.getenv("MIN_PROBABILITY_SCORE", "82.0"))
+    stop_loss_pct: float = float(os.getenv("STOP_LOSS_PCT", "0.007"))
+    timeout_minutes: int = int(os.getenv("TIMEOUT_MINUTES", "12"))
+    min_score: float = float(os.getenv("MIN_PROBABILITY_SCORE", "75.0"))
     port: int = int(os.getenv("PORT", "8080"))
     host: str = os.getenv("HOST", "127.0.0.1")
     dashboard_token: str = os.getenv("DASHBOARD_TOKEN", "")
@@ -31,8 +31,8 @@ class AppConfig:
     max_session_loss_pct: float = float(os.getenv("MAX_SESSION_LOSS_PCT", "0.03"))
     enable_flow_entries: bool = os.getenv("ENABLE_FLOW_ENTRIES", "true").lower() == "true"
     enable_volume_decay_exit: bool = os.getenv("ENABLE_VOLUME_DECAY_EXIT", "true").lower() == "true"
-    symbol_cooldown_minutes: int = int(os.getenv("SYMBOL_COOLDOWN_MINUTES", "30"))
-    max_entries_per_hour: int = int(os.getenv("MAX_ENTRIES_PER_HOUR", "2"))
+    symbol_cooldown_minutes: int = int(os.getenv("SYMBOL_COOLDOWN_MINUTES", "10"))
+    max_entries_per_hour: int = int(os.getenv("MAX_ENTRIES_PER_HOUR", "20"))
 
     def __post_init__(self):
         if self.trading_mode not in {"PAPER", "LIVE"}:

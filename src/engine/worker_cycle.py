@@ -10,16 +10,17 @@ class WorkerCycleMixin:
         with self.lock:
             self.stale_symbols.clear()
             for sym, pos in list(self.positions.items()):
-                if pos.execution_uncertain:
-                    continue
+                if pos.execution_uncertain: continue
                 price = self.exchange.get_ticker_price(sym)
                 if price <= 0:
                     self.stale_symbols.add(sym)
                     continue
+                if hasattr(self, "shadow_engine"):
+                    self.shadow_engine.on_tick(sym, price)
                 now = datetime.now(timezone.utc)
-                previous_risk = (pos.highest_price, pos.is_breakeven_locked)
+                prev_risk = (pos.highest_price, pos.is_breakeven_locked)
                 should_exit, reason, ratio = self.risk_manager.evaluate_exit(pos, price, now)
-                if previous_risk != (pos.highest_price, pos.is_breakeven_locked):
+                if prev_risk != (pos.highest_price, pos.is_breakeven_locked):
                     self.persist()
                 if not should_exit and config.enable_volume_decay_exit and pos.entry_volume > 0:
                     elapsed = (now - pos.entry_time).total_seconds() / 60
@@ -71,6 +72,8 @@ class WorkerCycleMixin:
                     self.positions, self.latest_news, self.journal, before_order=self._before_order, after_order=self._after_order
                 )
                 if opened:
+                    if hasattr(self, "shadow_engine") and item.symbol in self.positions:
+                        self.shadow_engine.spawn_shadows(item.symbol, self.positions[item.symbol].entry_price)
                     self.entry_times.append(now)
                     self.cash = self.exchange.get_balance('USDT')
                     self.persist()
@@ -91,8 +94,7 @@ class WorkerCycleMixin:
             self.is_active = False
             self.error('توقفت الدخولات بعد خطأ: ' + type(exc).__name__)
         finally:
-            with self.lock:
-                self._publish()
+            with self.lock: self._publish()
 
     def shutdown(self):
         self.pool.shutdown(wait=False, cancel_futures=True)

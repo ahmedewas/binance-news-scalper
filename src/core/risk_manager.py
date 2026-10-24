@@ -71,8 +71,8 @@ class RiskManager:
         pnl_pct = (current_price - position.entry_price) / position.entry_price
         elapsed = (now - position.entry_time).total_seconds() / 60.0
 
-        # Institutional holding horizon: 60m standard, extending up to 90m for runners
-        eff_timeout = 90.0 if pnl_pct >= 0.005 else float(self.timeout_minutes)
+        # Fast momentum horizon: timeout_minutes, extending up to 1.5x for runners
+        eff_timeout = min(float(self.timeout_minutes) * 1.5, 90.0) if pnl_pct >= 0.005 else float(self.timeout_minutes)
         if elapsed >= eff_timeout:
             return True, f"TIMEOUT_RECYCLE (Elapsed {elapsed:.1f}m >= {eff_timeout:.0f}m)", 1.0
 
