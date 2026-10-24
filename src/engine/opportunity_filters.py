@@ -26,11 +26,9 @@ class OpportunityFilters:
                     return False, eff_threshold, "MACRO_VETO", reg_msg
 
         from src.core.sector_gate import SectorLeaderGate
-        sec_safe, sec_msg, sec_bonus = SectorLeaderGate().evaluate_sector(symbol, exchange)
+        sec_safe, sec_msg, _ = SectorLeaderGate().evaluate_sector(symbol, exchange)
         if not sec_safe:
             return False, eff_threshold, "SECTOR_VETO", sec_msg
-        if sec_bonus > 0:
-            eff_threshold = max(55.0, eff_threshold - sec_bonus)
 
         kl_15m = exchange.get_historical_klines(symbol, "15m", 25)
         if kl_15m:

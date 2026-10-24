@@ -43,7 +43,7 @@ class MarketScanner:
                                     "score": 0, "approved": False, "status": "بيانات غير متاحة"})
                     continue
                 phase, phase_score = self.regime_detector.detect_phase(klines)
-                score_res = self.scoring_engine.evaluate(sym, phase, phase_score, klines, 75.0)
+                score_res = self.scoring_engine.evaluate(sym, phase, phase_score, klines, 50.0)
                 results.append({
                     "symbol": sym, "price": price, "phase": phase.value,
                     "score": score_res.total_score, "approved": score_res.is_approved,

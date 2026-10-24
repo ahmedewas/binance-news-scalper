@@ -11,7 +11,7 @@ class RiskManager:
         trailing_offset_pct: float = 0.004,
         stop_loss_pct: float = 0.009,
         timeout_minutes: int = 20,
-        breakeven_trigger_pct: float = 0.003,
+        breakeven_trigger_pct: float = 0.006,
         fee_coverage_pct: float = 0.002,
         stage1_tp_pct: float = 0.012,
     ):
@@ -70,10 +70,9 @@ class RiskManager:
 
         pnl_pct = (current_price - position.entry_price) / position.entry_price
         elapsed = (now - position.entry_time).total_seconds() / 60.0
-        if elapsed >= 12.0 and gain_high < 0.0015 and not position.is_breakeven_locked:
-            return True, f"DORMANT_RECYCLE (Flat {pnl_pct*100:+.2f}% after {elapsed:.1f}m)", 1.0
 
-        eff_timeout = 35.0 if pnl_pct >= 0.0025 else float(self.timeout_minutes)
+        # Institutional holding horizon: 60m standard, extending up to 90m for runners
+        eff_timeout = 90.0 if pnl_pct >= 0.005 else float(self.timeout_minutes)
         if elapsed >= eff_timeout:
             return True, f"TIMEOUT_RECYCLE (Elapsed {elapsed:.1f}m >= {eff_timeout:.0f}m)", 1.0
 

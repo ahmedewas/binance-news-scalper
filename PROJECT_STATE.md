@@ -73,14 +73,13 @@
 6. **Mobile Independence:** Continues executing in cloud/server even when phone is powered off.
 
 ## 3. Active Sprint Status
-- **Current Milestone:** Swarm Intelligence Audit & Comprehensive Code Fortification COMPLETE.
+- **Current Milestone:** Institutional High-Conviction Sniper Mode & Fee Bleed Elimination COMPLETE.
+- **Overtrading Churn:** ELIMINATED (Raised `min_score` to 82.0, eliminated soft degradation to 55, capped entries at 2/hour, raised cooldown to 30m).
+- **Premature Clock Exits:** ABOLISHED (`DORMANT_RECYCLE` at 12m removed; trade horizon expanded to 60m standard, 90m for green runners).
+- **Risk-Reward Ratio ($R:R \ge 2:1$):** ENFORCED (ATR dynamic TP clamped between +1.8% and +3.0% against -0.9% hard stop).
+- **Bayesian Alpha Scoring:** INTEGRATED (`BayesianScorer` blended 75/25 with quantitative weighted score).
 - **Precision LOT_SIZE Math:** FIXED (Exact Decimal Quantization for non-decimal steps).
 - **Mode Switching Re-Wiring:** FIXED (`_cooldown_mgr`, `_notifier`, and state path synchronized).
-- **Alpha Pipeline Integration:** FIXED (`HurstFilter` and `CVDTracker` wired into scoring).
-- **Dynamic ATR Targets:** FIXED (Wired into `Position` and executed in `RiskManager`).
-- **Disk I/O Thrashing:** ELIMINATED (Removed unconditional 3s fsync persistence).
-- **Thread Concurrency:** SECURED (Locked `cash` balance and candidate list mutations).
-- **Backtester Intrabar Bias:** FIXED (Simulates intrabar high/low execution limits).
-- **Telegram `/resume` Safety:** FIXED (Graceful error handling and Arabic user replies).
-- **Test Verification:** 176/176 automated tests passing with zero errors (100% pass rate).
+- **Alpha Pipeline Integration:** FIXED (`HurstFilter`, `CVDTracker`, `BayesianScorer` wired into live scoring).
+- **Test Verification:** 196/196 automated tests passing with zero errors (100% pass rate).
 - **Protocol 7 Compliance:** ZERO files exceeding 100 lines across `src/` and `tests/`.

@@ -40,8 +40,8 @@ class ATRCalculator:
 
         atr_pct = atr / entry_price
 
-        # High-beta coins get wider TP up to +3.0%; low-vol get tight TP down to +0.8%
-        tp_pct = round(min(0.030, max(0.008, atr_pct * self.tp_mult)), 4)
+        # High-conviction R:R >= 2:1 targets: TP clamped between +1.8% and +3.0%
+        tp_pct = round(min(0.030, max(0.018, atr_pct * self.tp_mult)), 4)
 
         # SL clamped between -0.6% and -1.5%
         sl_pct = round(min(0.015, max(0.006, atr_pct * self.sl_mult)), 4)
