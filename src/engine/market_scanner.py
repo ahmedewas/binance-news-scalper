@@ -60,5 +60,19 @@ class MarketScanner:
         self.last_completed_at = datetime.now(timezone.utc).isoformat()
         return results
 
+    def find_breakouts(self) -> List[NewsItem]:
+        breakouts = []
+        for r in self.scan_if_needed(interval_seconds=15.0):
+            if r.get("approved"):
+                breakouts.append(NewsItem(
+                    news_id=f"spot_breakout_{r['symbol']}_{int(time.time()//60)}",
+                    title=f"[SPOT FLOW] {r['symbol']} Quantitative Surge | Score {r['score']:.1f}/100",
+                    source="binance_spot_flow",
+                    symbol=r["symbol"],
+                    sentiment_score=float(r.get("score", 75.0)),
+                    published_at=datetime.now(timezone.utc),
+                ))
+        return breakouts
+
     def get_market_radar(self) -> List[Dict[str, Any]]:
         return self.cached_results
