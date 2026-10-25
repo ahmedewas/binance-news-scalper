@@ -51,6 +51,7 @@ class Position:
     execution_uncertain: bool = False
     target_tp: float = 0.0
     stop_loss: float = 0.0
+    entry_vector: list = field(default_factory=list)
 
 
 @dataclass

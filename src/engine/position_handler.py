@@ -85,6 +85,7 @@ class PositionHandler:
             "reason": reason, "reason_arabic": PerformanceTracker.translate_reason(reason),
             "duration_mins": round((now - pos.entry_time).total_seconds() / 60, 1),
             "ratio": removed / pos.amount, "timestamp": now.isoformat(),
+            "vector": getattr(pos, "entry_vector", []),
         }
         pos.amount, pos.cost_basis, pos.execution_uncertain = max(0.0, pos.amount - removed), max(0.0, basis - sold_basis), False
         if "PARTIAL_TP" in reason:

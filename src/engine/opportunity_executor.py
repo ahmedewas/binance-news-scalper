@@ -69,11 +69,15 @@ class OpportunityExecutor:
             tp_pct, sl_pct, _ = ATRCalculator().calculate_targets(order.price, klines)
             target_tp = order.price * (1.0 + tp_pct)
             stop_loss = order.price * (1.0 - sl_pct)
+            vol = float(klines[-1]["volume"]) if klines else 1.0
+            avg_v = max(1e-5, sum(float(k.get("volume", 0.0)) for k in klines[-10:]) / 10.0) if klines else 1.0
+            from src.core.vector_memory import VectorMemoryBuffer
+            entry_vec = VectorMemoryBuffer.extract_vector(vol / avg_v, (cvd_score or 50) >= 50, 0.0, h_score or 0.5, phase_score)
             positions[item.symbol] = Position(
                 symbol=item.symbol, entry_price=order.price, current_price=order.price,
                 amount=order.amount, highest_price=order.price, entry_time=now, slot_id=slot_id,
                 entry_volume=float(klines[-1]["volume"]), cost_basis=(order.cost + order.fee_quote) if order.cost > 0 else slot_size,
-                target_tp=target_tp, stop_loss=stop_loss,
+                target_tp=target_tp, stop_loss=stop_loss, entry_vector=entry_vec,
             )
             pos_dict = {"symbol": item.symbol, "entry_price": order.price, "cost_basis": slot_size,
                         "target_tp": target_tp, "stop_loss": stop_loss, "slot_id": slot_id}

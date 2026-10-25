@@ -68,7 +68,8 @@ class OpportunityFilters:
             if exchange and hasattr(exchange, "_vector_memory"):
                 vol = float(klines[-1].get("volume", 1.0))
                 avg_vol = max(1e-5, sum(float(k.get("volume", 0.0)) for k in klines[-10:]) / 10.0)
-                vec = exchange._vector_memory.extract_vector(vol / avg_vol, True, 0.0, 0.55, 75.0)
+                h_val, cvd_val = OpportunityFilters.calculate_alpha_metrics(klines)
+                vec = exchange._vector_memory.extract_vector(vol / avg_vol, (cvd_val or 50.0) >= 50.0, 0.0, h_val or 0.55, 75.0)
                 ok_mem, _, msg_mem = exchange._vector_memory.evaluate_candidate(vec)
                 if not ok_mem:
                     return False, msg_mem

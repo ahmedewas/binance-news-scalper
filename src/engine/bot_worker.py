@@ -57,6 +57,7 @@ class BotWorker(WorkerSnapshotMixin, WorkerOrderOpsMixin, WorkerCycleMixin, Work
         self.last_news_poll = 0.0
         self._snapshot = {}
         self.restore()
+        self.meta_critic.reflect_on_history(self.trade_history)
         self.cash = float(exchange.get_balance('USDT'))
         self._publish()
 
@@ -68,9 +69,13 @@ class BotWorker(WorkerSnapshotMixin, WorkerOrderOpsMixin, WorkerCycleMixin, Work
     def _record(self, trade: dict) -> None:
         self.tracker.record_trade(trade['symbol'], trade['pnl_pct'], trade['pnl_usd'], trade['reason'])
         self.cooldowns[trade['symbol']] = time.time() + config.symbol_cooldown_minutes * 60
-        self.vector_memory.record_experience([0.6, 1.0, 0.2, 0.6, 0.8], won=(trade.get('pnl_usd', 0) > 0))
+        vec = trade.get('vector') or [0.6, 1.0, 0.0, 0.5, 0.7]
+        self.vector_memory.record_experience(vec, won=(trade.get('pnl_usd', 0) > 0))
         self.shadow_engine.evaluate_regret(trade['symbol'], trade.get('pnl_pct', 0.0))
         self.genetic_optimizer.record_outcome(trade.get('pnl_pct', 0.0))
+        fittest = self.genetic_optimizer.get_fittest_params()
+        self.risk_manager.trailing_tp_pct = fittest["tp_pct"]
+        self.risk_manager.stop_loss_pct = fittest["sl_pct"]
         self.meta_critic.reflect_on_history(self.trade_history)
         self.persist()
         try:
