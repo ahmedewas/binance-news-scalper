@@ -39,7 +39,7 @@ class BotWorker(WorkerSnapshotMixin, WorkerOrderOpsMixin, WorkerCycleMixin, Work
         self.cash = float(exchange.get_balance('USDT'))
         self.tracker = PerformanceTracker(max(self.cash, 0.01))
         self.journal = journal if journal is not None else AuditJournal()
-        self.volume_decay_detector = VolumeDecayExitDetector(min_retention_ratio=0.10, min_elapsed_minutes=14.0)
+        self.volume_decay_detector = VolumeDecayExitDetector(min_retention_ratio=0.05, min_elapsed_minutes=35.0)
         self.cooldown_mgr = CooldownManager(default_cooldown_minutes=10.0)
         self.exchange._cooldown_mgr = self.cooldown_mgr
         self.notifier = TelegramNotifier(getattr(config, "telegram_bot_token", None), getattr(config, "telegram_chat_id", None))

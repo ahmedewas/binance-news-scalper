@@ -34,15 +34,19 @@ class PerformanceTracker:
         realized = round(sum(t["pnl_usd"] for t in self.trades), 4)
         total_pnl = round(current_balance - self.initial_balance, 4)
         g_w, g_l = sum(t["pnl_usd"] for t in w_t), abs(sum(t["pnl_usd"] for t in l_t))
+        total_fees = round(sum(t.get("fee_quote", 0.0) for t in self.trades), 4)
+        gross_pnl = round(realized + total_fees, 4)
         return {
             "initial_balance": self.initial_balance, "current_balance": round(current_balance, 2),
             "realized_pnl_usd": realized, "unrealized_pnl_usd": round(total_pnl - realized, 4),
-            "total_fees_usd": round(sum(t.get("fee_quote", 0.0) for t in self.trades), 4),
+            "total_fees_usd": total_fees, "gross_pnl_usd": gross_pnl,
             "total_pnl_usd": total_pnl, "total_pnl_pct": round((total_pnl / self.initial_balance) * 100, 2),
             "total_trades": len(self.trades), "wins": len(w_t), "losses": len(l_t),
             "win_rate": round(len(w_t) / len(self.trades) * 100, 1) if self.trades else 0.0,
             "profit_factor": round(g_w / g_l, 2) if g_l > 1e-6 else (99.0 if g_w > 0 else 0.0),
             "avg_win_usd": round(g_w / len(w_t), 4) if w_t else 0.0, "avg_loss_usd": round(g_l / len(l_t), 4) if l_t else 0.0,
+            "best_trade_usd": round(max((t["pnl_usd"] for t in self.trades), default=0.0), 4),
+            "worst_trade_usd": round(min((t["pnl_usd"] for t in self.trades), default=0.0), 4),
             "elapsed_minutes": elapsed_mins, "elapsed_hours_str": f"{int(elapsed_mins // 60)}h {int(elapsed_mins % 60)}m",
             "hourly_snapshots": self.hourly_snapshots[-8:],
         }

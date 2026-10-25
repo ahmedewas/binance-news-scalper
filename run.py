@@ -71,6 +71,8 @@ if __name__ == "__main__":
     logger.info(f"Serving Dashboard on http://{config.host}:{config.port}")
     try:
         uvicorn.Server(server_config).run(sockets=[server_socket])
+    except Exception as exc:
+        logger.exception("Server error: %s", exc)
     finally:
         stop.set()
         t.join(timeout=20)

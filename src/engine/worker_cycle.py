@@ -20,8 +20,7 @@ class WorkerCycleMixin:
                 now = datetime.now(timezone.utc)
                 prev_risk = (pos.highest_price, pos.is_breakeven_locked)
                 should_exit, reason, ratio = self.risk_manager.evaluate_exit(pos, price, now)
-                if prev_risk != (pos.highest_price, pos.is_breakeven_locked):
-                    self.persist()
+                if prev_risk != (pos.highest_price, pos.is_breakeven_locked): self.persist()
                 if not should_exit and config.enable_volume_decay_exit and pos.entry_volume > 0:
                     elapsed = (now - pos.entry_time).total_seconds() / 60
                     if elapsed >= self.volume_decay_detector.min_elapsed:
@@ -53,7 +52,8 @@ class WorkerCycleMixin:
                 return
             now = time.time()
             self.entry_times = [t for t in self.entry_times if now - t < 3600]
-            if len(self.entry_times) >= config.max_entries_per_hour:
+            max_entries = 60 if self.mode == 'PAPER' else config.max_entries_per_hour
+            if len(self.entry_times) >= max_entries:
                 return
             eq = self.cash + sum(p.amount * p.current_price for p in self.positions.values())
             alloc = self.allocator.calculate_slots(self.cash, eq)
@@ -85,8 +85,7 @@ class WorkerCycleMixin:
         try:
             self.manage_positions()
             with self.lock:
-                self.cash = self.exchange.get_balance('USDT')
-                self._publish()
+                self.cash, _ = self.exchange.get_balance('USDT'), self._publish()
             self._poll_news()
             self.process_news_opportunities()
             self.last_step = datetime.now(timezone.utc).isoformat()
