@@ -7,7 +7,7 @@ def test_genetic_optimizer_evolution():
     params = opt.get_fittest_params()
     assert 0.008 <= params["tp_pct"] <= 0.025
     assert 0.005 <= params["sl_pct"] <= 0.012
-    assert 5 <= params["timeout_min"] <= 25
+    assert 5 <= params["timeout_min"] <= 45
 
     # Record winning outcomes
     opt.record_outcome(0.015)

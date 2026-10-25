@@ -1,6 +1,6 @@
 """Persistent state helpers; the worker is the sole owner of mutations."""
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from src.core.models import Position
 
 
@@ -52,7 +52,10 @@ class WorkerState:
         self.entry_times = state.get('entry_times', [])
         self.loss_limit_hit = self.mode == 'LIVE' and state.get('loss_limit_hit', False)
         self.tracker.initial_balance = state['initial_balance']
-        self.tracker.start_time = datetime.fromisoformat(state['start_time'])
+        if not self.trade_history and not self.positions:
+            self.tracker.start_time = datetime.now(timezone.utc)
+        elif state.get('start_time'):
+            self.tracker.start_time = datetime.fromisoformat(state['start_time'])
         self.tracker.trades = [{**t, 'timestamp': datetime.fromisoformat(t['timestamp'])}
                                for t in state.get('tracker_trades', [])]
         self.tracker.hourly_snapshots = state.get('hourly_snapshots', [])

@@ -67,7 +67,7 @@ class BotWorker(WorkerSnapshotMixin, WorkerOrderOpsMixin, WorkerCycleMixin, Work
         del self.errors[:-20]
 
     def _record(self, trade: dict) -> None:
-        self.tracker.record_trade(trade['symbol'], trade['pnl_pct'], trade['pnl_usd'], trade['reason'])
+        self.tracker.record_trade(trade['symbol'], trade['pnl_pct'], trade['pnl_usd'], trade['reason'], fee=trade.get('fee_quote', 0.0))
         self.cooldowns[trade['symbol']] = time.time() + config.symbol_cooldown_minutes * 60
         vec = trade.get('vector') or [0.6, 1.0, 0.0, 0.5, 0.7]
         self.vector_memory.record_experience(vec, won=(trade.get('pnl_usd', 0) > 0))

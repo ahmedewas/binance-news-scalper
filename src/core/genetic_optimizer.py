@@ -14,7 +14,7 @@ class GeneticOptimizer:
             {"tp_pct": 0.010, "sl_pct": 0.006, "timeout_min": 10, "fitness": 0.0, "evals": 0},
             {"tp_pct": 0.012, "sl_pct": 0.007, "timeout_min": 15, "fitness": 0.0, "evals": 0},
             {"tp_pct": 0.015, "sl_pct": 0.008, "timeout_min": 20, "fitness": 0.0, "evals": 0},
-            {"tp_pct": 0.018, "sl_pct": 0.009, "timeout_min": 30, "fitness": 0.0, "evals": 0},
+            {"tp_pct": 0.018, "sl_pct": 0.009, "timeout_min": 25, "fitness": 0.0, "evals": 0},
         ]
         while len(self.population) < self.population_size:
             self.population.append(self._mutate(self.population[0].copy()))
