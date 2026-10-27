@@ -129,17 +129,3 @@ function refresh() {
 }
 setInterval(refresh, 2500);
 refresh();
-    if (statusFlight) return statusFlight;
-    statusFlight = api('/api/status').then(d => {
-        state = d; lastSuccess = Date.now();
-        $('connection-state').textContent = 'متصل بنجاح';
-        $('updated-at').textContent = `آخر تحديث: ${new Date().toLocaleTimeString('ar-EG')}`;
-        render(d);
-    }).catch(e => {
-        $('connection-state').textContent = 'تعذر الاتصال';
-        $('updated-at').textContent = e.message;
-    }).finally(() => { statusFlight = null; });
-    return statusFlight;
-}
-setInterval(refresh, 2500);
-refresh();
