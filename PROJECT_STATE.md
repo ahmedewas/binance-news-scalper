@@ -322,3 +322,14 @@
   - Genetic Optimizer stable at Generation 4 (`fittest_tp: 0.0198`, `fittest_sl: 0.0082`).
 - **Health & Telemetry:** 0 errors (`errors: []`), API alive and serving on port 8080.
 - **Verification:** 203/203 unit and regression tests passing (100% pass rate in 3.26s). Zero files > 100 lines.
+
+## 22. Architectural Upgrade: Macro Trend Pre-Filter & Dynamic Kelly Sizing (2026-10-27)
+- **1. Multi-Hour Macro Dump Protection (`src/core/mtf_confluence.py`):**
+  - Tightened 15m confluence to instantly reject entries when `cur_price < fast_ema < slow_ema`.
+  - Added 4-hour macro dump veto (`MTF_MACRO_DUMP_PROTECTION`) if 16-candle return is $\le -3.0\%$ below EMA21, neutralizing dead-cat bounce traps before taking initial losses.
+- **2. Dynamic Kelly Alpha Sizing (`src/core/kelly_sizer.py` & `src/engine/opportunity_executor.py`):**
+  - Integrated `calculate_alpha_multiplier` scaling position size between 1.0x and 1.5x based on institutional conviction score ($\ge 88.0$), undefeated symbol track record ($\ge 2$ wins, 0 losses), and winning vector pattern matching.
+  - Safely bounded by `min_notional` and available free USDT.
+- **3. Verification & Compliance:**
+  - 205/205 unit and regression tests passing with 100% pass rate in 3.30s.
+  - All files in `src/` and `tests/` strictly $\le 100$ lines (Protocol 7).

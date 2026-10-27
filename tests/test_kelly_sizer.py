@@ -31,3 +31,17 @@ def test_kelly_sizing_below_min_notional():
     ok, size, msg = sizer.size_position(usdt_balance=4.0, score=95.0, min_notional=5.0)
     assert not ok
     assert size == 0.0
+
+
+def test_kelly_alpha_multiplier():
+    sizer = KellySizer()
+    # Baseline
+    assert sizer.calculate_alpha_multiplier(score=75.0) == 1.0
+    # High score (>=88)
+    assert sizer.calculate_alpha_multiplier(score=90.0) == 1.20
+    # Star coin (2+ wins, 0 losses) + High score
+    star_mult = sizer.calculate_alpha_multiplier(score=90.0, symbol_wins=3, symbol_losses=0)
+    assert star_mult == 1.40
+    # Max cap check
+    capped = sizer.calculate_alpha_multiplier(score=95.0, symbol_wins=5, symbol_losses=0, has_vector_match=True)
+    assert capped == 1.50

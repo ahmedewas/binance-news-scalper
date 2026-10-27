@@ -52,6 +52,7 @@ class BotWorker(WorkerSnapshotMixin, WorkerOrderOpsMixin, WorkerCycleMixin, Work
         self.exchange._shadow_engine = self.shadow_engine
         self.exchange._meta_critic = self.meta_critic
         self.exchange._genetic_optimizer = self.genetic_optimizer
+        self.exchange._trade_history = self.trade_history
         self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix='market-data')
         self.news_future = None
         self.last_news_poll = 0.0

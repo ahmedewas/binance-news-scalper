@@ -46,3 +46,22 @@ class KellySizer:
             return False, 0.0, f"Size {final_size} < Min notional {min_notional}"
 
         return True, final_size, f"Kelly Size: ${final_size:.2f} (Prob: {win_prob*100:.1f}%)"
+
+    def calculate_alpha_multiplier(
+        self,
+        score: float,
+        symbol_wins: int = 0,
+        symbol_losses: int = 0,
+        has_vector_match: bool = False,
+    ) -> float:
+        """Computes dynamic size multiplier (1.0x to 1.5x) for high-conviction star setups."""
+        mult = 1.0
+        if score >= 88.0:
+            mult += 0.20
+        if symbol_wins >= 2 and symbol_losses == 0:
+            mult += 0.20
+        elif symbol_wins > symbol_losses:
+            mult += 0.10
+        if has_vector_match:
+            mult += 0.10
+        return min(1.50, round(mult, 2))

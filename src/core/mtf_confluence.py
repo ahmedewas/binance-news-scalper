@@ -31,11 +31,10 @@ class MultiTimeframeConfluence:
         # 1. Bearish Downtrend: Price is below both EMAs and Fast EMA < Slow EMA
         if cur_price < fast_ema and fast_ema < slow_ema:
             pct_below = (slow_ema - cur_price) / slow_ema
-            if pct_below > 0.008:
-                return (
-                    False,
-                    f"MTF_BEARISH_REJECTION: 15m is in downtrend ({pct_below*100:.2f}% below EMA21)",
-                )
+            return (
+                False,
+                f"MTF_BEARISH_REJECTION: 15m is in downtrend ({pct_below*100:.2f}% below EMA21)",
+            )
 
         # 2. Check 15m candle structure: Lower Highs + Lower Lows
         if len(klines_15m) >= 3:
@@ -43,5 +42,11 @@ class MultiTimeframeConfluence:
             lows = [float(k.get("low", 0.0)) for k in klines_15m[-3:]]
             if highs[2] < highs[1] < highs[0] and lows[2] < lows[1] < lows[0] and cur_price < fast_ema:
                 return False, "MTF_DOWNTREND_STRUCTURE: Consecutive 15m lower-lows detected"
+
+        # 3. Macro Multi-Hour Dump Protection (16 candles * 15m = 4 hours)
+        if len(closes) >= 16:
+            change_4h = (closes[-1] - closes[-16]) / closes[-16]
+            if change_4h < -0.030 and cur_price < slow_ema:
+                return False, f"MTF_MACRO_DUMP_PROTECTION: 4h trend is down {change_4h*100:.1f}%"
 
         return True, "MTF_BULLISH_CONFLUENCE: 15m trend supportive"

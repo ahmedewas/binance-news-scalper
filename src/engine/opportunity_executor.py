@@ -59,12 +59,18 @@ class OpportunityExecutor:
 
         rules = exchange.get_market_rules(item.symbol)
         minimum = max(config.min_notional, rules.get("min_notional", 0))
-        if slot_size < minimum or slot_size > exchange.get_balance("USDT"):
+        th = getattr(exchange, "_trade_history", None) or []
+        s_w = sum(1 for t in th if t.get("symbol") == item.symbol and t.get("pnl_usd", 0) > 0)
+        s_l = sum(1 for t in th if t.get("symbol") == item.symbol and t.get("pnl_usd", 0) < 0)
+        from src.core.kelly_sizer import KellySizer
+        k_mult = KellySizer().calculate_alpha_multiplier(res.total_score, s_w, s_l)
+        eff_size = min(round(slot_size * k_mult, 2), exchange.get_balance("USDT"))
+        if eff_size < minimum:
             entry.update(approved=False, reason="الرصيد أو حجم الصفقة لا يحقق حدود السوق")
             return False
 
-        client_id = before_order(item.symbol, "BUY", slot_size) if before_order else None
-        order = exchange.place_market_buy(item.symbol, slot_size, **({"client_order_id": client_id} if client_id else {}))
+        client_id = before_order(item.symbol, "BUY", eff_size) if before_order else None
+        order = exchange.place_market_buy(item.symbol, eff_size, **({"client_order_id": client_id} if client_id else {}))
         if order.success and order.price > 0 and order.amount > 0:
             tp_pct, sl_pct, _ = ATRCalculator().calculate_targets(order.price, klines)
             target_tp = order.price * (1.0 + tp_pct)
@@ -76,10 +82,10 @@ class OpportunityExecutor:
             positions[item.symbol] = Position(
                 symbol=item.symbol, entry_price=order.price, current_price=order.price,
                 amount=order.amount, highest_price=order.price, entry_time=now, slot_id=slot_id,
-                entry_volume=float(klines[-1]["volume"]), cost_basis=(order.cost + order.fee_quote) if order.cost > 0 else slot_size,
+                entry_volume=float(klines[-1]["volume"]), cost_basis=(order.cost + order.fee_quote) if order.cost > 0 else eff_size,
                 target_tp=target_tp, stop_loss=stop_loss, entry_vector=entry_vec,
             )
-            pos_dict = {"symbol": item.symbol, "entry_price": order.price, "cost_basis": slot_size,
+            pos_dict = {"symbol": item.symbol, "entry_price": order.price, "cost_basis": eff_size,
                         "target_tp": target_tp, "stop_loss": stop_loss, "slot_id": slot_id}
             if journal:
                 journal.log_trade_opened(pos_dict, item.title, res.total_score, phase.value)
