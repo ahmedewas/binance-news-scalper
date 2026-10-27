@@ -83,9 +83,12 @@ class PaperExchange(BaseExchange):
                            cost=gross, fee_quote=fee, client_order_id=client_order_id or "")
 
     def reconcile_order(self, symbol: str, client_order_id: str) -> OrderResult:
+        """Reports order status only; never executes a sell autonomously."""
         base = symbol.split("/")[0] if "/" in symbol else symbol.replace("USDT", "")
         avail = self.holdings.get(base, 0.0)
+        price = self._price_cache.get(symbol.replace("/", "").upper(), 0.0)
         if avail > 0:
-            return self.place_market_sell(symbol, avail, client_order_id)
+            return OrderResult(True, client_order_id, symbol, price, avail, "BUY", "FILLED",
+                               "Paper order confirmed filled", client_order_id=client_order_id)
         return OrderResult(True, client_order_id, symbol, 0, 0, "", "REJECTED",
                            "No holdings for paper reconcile", client_order_id=client_order_id)

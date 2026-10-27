@@ -17,7 +17,7 @@ class OpportunityExecutor:
         if age < -60 or age > config.max_news_age_seconds:
             return False
         klines = exchange.get_historical_klines(item.symbol, "1m", 40)
-        if klines and klines[-1].get("close_time") and now.timestamp() * 1000 - klines[-1]["close_time"] > 180000:
+        if not klines or (klines[-1].get("close_time") and now.timestamp() * 1000 - klines[-1]["close_time"] > 180000):
             return False
 
         def _reject_early(phase_name, reason_msg):
@@ -52,11 +52,13 @@ class OpportunityExecutor:
             return False
 
         cur_p = exchange.get_ticker_price(item.symbol)
+        if not cur_p or cur_p <= 0:
+            entry.update(approved=False, reason="سعر السوق غير متاح — رفض لمنع استخدام سعر قديم")
+            return False
         ok_micro, micro_msg = OpportunityFilters.check_microstructure(item.symbol, klines, cur_p, exchange=exchange)
         if not ok_micro:
             entry.update(approved=False, reason=micro_msg)
             return False
-
         rules = exchange.get_market_rules(item.symbol)
         minimum = max(config.min_notional, rules.get("min_notional", 0))
         th = getattr(exchange, "_trade_history", None) or []

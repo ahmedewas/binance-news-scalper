@@ -52,12 +52,13 @@ class BotWorker(WorkerSnapshotMixin, WorkerOrderOpsMixin, WorkerCycleMixin, Work
         self.exchange._shadow_engine = self.shadow_engine
         self.exchange._meta_critic = self.meta_critic
         self.exchange._genetic_optimizer = self.genetic_optimizer
-        self.exchange._trade_history = self.trade_history
         self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix='market-data')
         self.news_future = None
         self.last_news_poll = 0.0
         self._snapshot = {}
         self.restore()
+        # Attach AFTER restore() so exchange sees the fully-restored trade history
+        self.exchange._trade_history = self.trade_history
         self.meta_critic.reflect_on_history(self.trade_history)
         self.cash = float(exchange.get_balance('USDT'))
         self._publish()
@@ -75,8 +76,10 @@ class BotWorker(WorkerSnapshotMixin, WorkerOrderOpsMixin, WorkerCycleMixin, Work
         self.shadow_engine.evaluate_regret(trade['symbol'], trade.get('pnl_pct', 0.0))
         self.genetic_optimizer.record_outcome(trade.get('pnl_pct', 0.0))
         fittest = self.genetic_optimizer.get_fittest_params()
+        # Only tighten TP; never lower SL below current setting to protect open positions
         self.risk_manager.trailing_tp_pct = fittest["tp_pct"]
-        self.risk_manager.stop_loss_pct = fittest["sl_pct"]
+        if fittest["sl_pct"] > self.risk_manager.stop_loss_pct:
+            self.risk_manager.stop_loss_pct = fittest["sl_pct"]
         self.meta_critic.reflect_on_history(self.trade_history)
         self.persist()
         try:

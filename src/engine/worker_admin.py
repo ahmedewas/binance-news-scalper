@@ -28,6 +28,16 @@ class WorkerAdminMixin:
             mode_upper = new_mode.upper()
             if mode_upper not in ('PAPER', 'LIVE'):
                 raise ValueError('نمط التداول يجب أن يكون إما PAPER أو LIVE')
+            # Same-mode re-selection: preserve session state, never reset or bypass safety
+            if mode_upper == self.mode:
+                # Still check if a saved state file exists at a different path (same guard as cross-mode)
+                if self.store:
+                    dest_path = self.store.path.parent / f"state-{mode_upper.lower()}.json"
+                    if dest_path.resolve() != self.store.path.resolve() and StateStore(dest_path).load():
+                        raise ValueError('توجد حالة محفوظة للوضع المطلوب؛ أعد تشغيل البرنامج بهذا الوضع لاستعادتها بأمان')
+                if self.loss_limit_hit or self.storage_failed:
+                    return {'mode': self.mode, 'is_active': False, 'balance': self.cash}
+                return {'mode': self.mode, 'is_active': self.is_active, 'balance': float(self.exchange.get_balance('USDT'))}
             if self.positions or self.pending_orders:
                 raise ValueError('يجب إغلاق كافة الصفقات وتسوية الأوامر المعلقة قبل تغيير نمط التداول')
             if self.store:
@@ -42,9 +52,15 @@ class WorkerAdminMixin:
             else:
                 from src.exchange.paper import PaperExchange
                 exchange = PaperExchange(config.initial_paper_balance)
+            # Re-attach all AI/analytics references to the new exchange object
             self.exchange = exchange
             self.exchange._cooldown_mgr = getattr(self, "cooldown_mgr", None)
             self.exchange._notifier = getattr(self, "notifier", None)
+            self.exchange._meta_critic = getattr(self, "meta_critic", None)
+            self.exchange._vector_memory = getattr(self, "vector_memory", None)
+            self.exchange._shadow_engine = getattr(self, "shadow_engine", None)
+            self.exchange._genetic_optimizer = getattr(self, "genetic_optimizer", None)
+            self.exchange._trade_history = self.trade_history
             if self.store:
                 self.store = StateStore(self.store.path.parent / f"state-{mode_upper.lower()}.json")
             self.mode = mode_upper
