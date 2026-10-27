@@ -20,7 +20,7 @@ class VectorMemoryBuffer:
             min(5.0, max(0.5, float(rvol))) / 5.0,
             1.0 if cvd_pos else 0.0,
             max(-1.0, min(1.0, float(obi))),
-            max(0.0, min(1.0, float(hurst))),
+            max(0.0, min(1.0, float(hurst) / 100.0 if float(hurst) > 1.0 else float(hurst))),
             max(0.0, min(100.0, float(phase_score))) / 100.0,
         ]
 

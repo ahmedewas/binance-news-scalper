@@ -1,5 +1,20 @@
 # Living Memory & Project State Tracking: Binance News Scalper
 
+## Security & Correctness Hardening (8 Vulnerability Patches) — 2026-10-28 — Verified
+
+1. **Same-Mode Preservation Guard (`src/engine/worker_admin.py`):** Re-selecting the active mode (PAPER or LIVE) preserves running session state, balance, and tracker; never resets state or bypasses LIVE loss circuit. Checks destination state conflicts even on same-mode.
+2. **Switch Mode Security & Token Barrier (`src/engine/worker_admin.py`):** Switching to LIVE requires Binance API keys and a strong `DASHBOARD_TOKEN` (>= 24 chars). Full re-attachment of all AI/learning components (`cooldown_mgr`, `notifier`, `meta_critic`, `vector_memory`, `shadow_engine`, `genetic_optimizer`, `trade_history`) to the new exchange.
+3. **Paper Settlement Safety (`src/exchange/paper.py`):** `reconcile_order()` returns FILLED status only without executing autonomous sell orders that previously liquidated held positions during reconciliation.
+4. **Stale Price & Missing Klines Shield (`src/engine/opportunity_executor.py`):** Unconditionally rejects opportunities with missing klines or ticker price <= 0, blocking execution on disconnected feeds.
+5. **Active Hurst Chaos Rejection (`src/engine/opportunity_filters.py`, `src/engine/worker_admin.py`):** Fixed Hurst score passthrough (`eff_hurst = h_score`) so anti-persistent / Brownian chaos (<30 score) properly trips the rejection filter in `ScoringEngine`. Session reset re-links `exchange._trade_history` and re-reflects on `MetaCritic`.
+6. **Genetic Optimizer Execution Alignment & SL Floor (`src/engine/bot_worker.py`):** Evolved `timeout_min` and `tp_pct` parameters synchronize with execution (`risk_manager.timeout_minutes` and `stage1_tp_pct`). Stop loss percentage can only move up, never lowering the protective floor on active positions.
+7. **Restored Trade History Sizing Sync (`src/engine/bot_worker.py`):** `exchange._trade_history` assigned after `self.restore()` completes, ensuring Kelly Alpha sizing sees complete historical trade edge.
+8. **Fee Accuracy, Live Diagnostics & Telegram Binding (`src/engine/position_handler.py`, `src/config.py`, `src/web/static/dashboard.js`, `src/engine/worker_snapshot.py`):**
+   - True round-trip fee calculation (buy fees + sell fees) in position exit fills.
+   - Fixed `-0.0000` fee display and added missing `fetchJournal()` daemon in dashboard.
+   - Integrated forensic `SessionAutopsy` recommendation into health telemetry.
+   - `AppConfig` binds `telegram_bot_token` and `telegram_chat_id` from environment.
+
 ## Approved policy — 2026-10-23
 
 - Session loss lock applies only to LIVE. PAPER ignores previously persisted loss locks and never trips this circuit, per explicit user request.

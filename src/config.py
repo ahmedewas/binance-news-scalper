@@ -33,6 +33,8 @@ class AppConfig:
     enable_volume_decay_exit: bool = os.getenv("ENABLE_VOLUME_DECAY_EXIT", "true").lower() == "true"
     symbol_cooldown_minutes: int = int(os.getenv("SYMBOL_COOLDOWN_MINUTES", "20"))
     max_entries_per_hour: int = int(os.getenv("MAX_ENTRIES_PER_HOUR", "30"))
+    telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    telegram_chat_id: str = os.getenv("TELEGRAM_CHAT_ID", "")
 
     def __post_init__(self):
         if self.trading_mode not in {"PAPER", "LIVE"}:

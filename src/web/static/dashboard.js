@@ -54,7 +54,8 @@ function render(d) {
     $('win-rate').textContent = `${num(p.win_rate, 1)}%`;
     $('win-rate').className = Number(p.win_rate) >= 50 ? 'positive' : 'negative';
     $('trades-sub').textContent = `${p.wins || 0} رابحة / ${p.losses || 0} خاسرة · إجمالي ${p.total_trades || 0}`;
-    $('fees').textContent = `-${money(p.total_fees_usd || 0, 4)}`;
+    const totalFees = Number(p.total_fees_usd) || 0;
+    $('fees').textContent = totalFees > 0 ? `-${money(totalFees, 4)}` : money(0, 2);
     $('fees').style.color = '#e09f3e';
     $('pf-sub').textContent = `معامل ربح: ${num(p.profit_factor)} · قبل الرسوم: ${pnlMoney(p.gross_pnl_usd || 0, 4)}`;
     $('session-time').textContent = p.elapsed_hours_str || '—';
@@ -62,9 +63,10 @@ function render(d) {
     $('pending').textContent = `أوامر قيد المعالجة: ${pendingCount(d)}`;
     renderPositions(pos); renderRadar();
     details('health-box',[
+        ['التشخيص الذاتي للجلسة', h.autopsy_rec || 'قيد المراقبة'],
         ['آخر دورة', h.last_step ? new Date(h.last_step).toLocaleTimeString('ar-EG') : '—'],
         ['آخر فحص سوق', h.last_scan ? new Date(h.last_scan).toLocaleTimeString('ar-EG') : '—'],
-        ['إجمالي العمولات المخصومة', money(p.total_fees_usd||0, 4)],
+        ['إجمالي العمولات المخصومة', money(totalFees, 4)],
         ['ربح إجمالي قبل الرسوم (Gross)', pnlMoney(p.gross_pnl_usd||0, 4)],
         ['صافي أرباح محققة في الجيب', pnlMoney(p.realized_pnl_usd||0, 4)],
         ['أرباح عائمة في الصفقات النشطة', pnlMoney(p.unrealized_pnl_usd||0, 4)],
@@ -72,6 +74,7 @@ function render(d) {
         ['متوسط خسارة الصفقة الخاسرة', `-${money(p.avg_loss_usd||0, 4)}`],
         ['أفضل صفقة في الجلسة', pnlMoney(p.best_trade_usd||0, 4)],
         ['أسوأ صفقة في الجلسة', pnlMoney(p.worst_trade_usd||0, 4)],
+        ['آخر خطأ مسجل', h.last_error || 'لا توجد أخطاء'],
         ['الأخطاء المسجلة', array(h.errors).length],
         ['حالة تغذية الأسعار', stalePrices(d)?'قديمة — يلزم الانتباه':'محدثة وفورية'],
         ['حد خسارة الجلسة', d.mode==='PAPER'?'معطّل في المحاكاة':h.loss_limit_hit?'تم بلوغه — محظور':'لم يُبلغ']
@@ -126,6 +129,20 @@ function refresh() {
         $('updated-at').textContent = e.message;
     }).finally(() => { statusFlight = null; });
     return statusFlight;
+}
+async function fetchJournal() {
+    if (journalFlight) return journalFlight;
+    journalFlight = api('/api/journal').then(d => {
+        journal = d?.journal || '';
+        journalAt = Date.now();
+        if ($('journal-box')) $('journal-box').textContent = journal || 'السجل فارغ حالياً';
+        if ($('journal-state')) $('journal-state').textContent = `تم التحديث: ${new Date().toLocaleTimeString('ar-EG')}`;
+        return true;
+    }).catch(e => {
+        if ($('journal-state')) $('journal-state').textContent = `تعذر تحميل السجل: ${e.message}`;
+        return false;
+    }).finally(() => { journalFlight = null; });
+    return journalFlight;
 }
 setInterval(refresh, 2500);
 refresh();

@@ -47,19 +47,16 @@ class WorkerAdminMixin:
             if mode_upper == 'LIVE':
                 if not (config.api_key and config.api_secret):
                     raise ValueError('مفاتيح بينانس API غير مدخلة في الإعدادات؛ لا يمكن بدء التداول الحقيقي')
+                if len(getattr(config, "dashboard_token", "") or "") < 24:
+                    raise ValueError('رمز لوحة التحكم DASHBOARD_TOKEN يجب ألا يقل عن 24 حرفاً للتشغيل الحقيقي')
                 from src.exchange.live import LiveExchange
                 exchange = LiveExchange(config.api_key, config.api_secret)
             else:
                 from src.exchange.paper import PaperExchange
                 exchange = PaperExchange(config.initial_paper_balance)
-            # Re-attach all AI/analytics references to the new exchange object
             self.exchange = exchange
-            self.exchange._cooldown_mgr = getattr(self, "cooldown_mgr", None)
-            self.exchange._notifier = getattr(self, "notifier", None)
-            self.exchange._meta_critic = getattr(self, "meta_critic", None)
-            self.exchange._vector_memory = getattr(self, "vector_memory", None)
-            self.exchange._shadow_engine = getattr(self, "shadow_engine", None)
-            self.exchange._genetic_optimizer = getattr(self, "genetic_optimizer", None)
+            for a in ("cooldown_mgr", "notifier", "meta_critic", "vector_memory", "shadow_engine", "genetic_optimizer"):
+                setattr(self.exchange, f"_{a}", getattr(self, a, None))
             self.exchange._trade_history = self.trade_history
             if self.store:
                 self.store = StateStore(self.store.path.parent / f"state-{mode_upper.lower()}.json")
@@ -87,6 +84,8 @@ class WorkerAdminMixin:
             self.cash = config.initial_paper_balance
             self.tracker = PerformanceTracker(self.cash)
             self.trade_history, self.latest_news, self.entry_times, self.candidates = [], [], [], []
+            self.exchange._trade_history = self.trade_history
+            getattr(self, "meta_critic", None) and self.meta_critic.reflect_on_history(self.trade_history)
             self.cooldowns = {}
             self.loss_limit_hit = False
             self.last_error, self.errors = '', []

@@ -39,6 +39,8 @@ class WorkerSnapshotMixin:
         crit = getattr(self, "meta_critic", None)
         vmem = getattr(self, "vector_memory", None)
         fit = getattr(gen, "get_fittest_params", lambda: {})()
+        from src.core.session_autopsy import SessionAutopsy
+        rec = SessionAutopsy.analyze_session(self.trade_history).get("recommendation", "")
         adaptive_ai = dict(
             generation=getattr(gen, "generation", 1),
             fittest_tp=fit.get("tp_pct", self.risk_manager.trailing_tp_pct),
@@ -58,7 +60,7 @@ class WorkerSnapshotMixin:
             pending_orders=self.pending_orders, adaptive_ai=adaptive_ai, health=dict(
                 last_step=self.last_step, last_scan=getattr(scanner, 'last_completed_at', None),
                 last_error=self.last_error, errors=self.errors, price_stale=list(self.stale_symbols),
-                loss_limit_hit=self.loss_limit_hit
+                loss_limit_hit=self.loss_limit_hit, autopsy_rec=rec
             ),
             settings=dict(
                 min_score=self.scoring_engine.min_score, max_slots=self.allocator.max_slots,

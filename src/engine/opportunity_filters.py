@@ -48,10 +48,9 @@ class OpportunityFilters:
         """Computes Hurst Exponent fractal persistence and CVD order flow delta."""
         try:
             closes = [float(k.get("close", 0.0)) for k in klines]
-            ok_h, h_score, _ = HurstFilter().validate_market_regime(closes)
+            _, h_score, _ = HurstFilter().validate_market_regime(closes)
             cvd_score, _ = CVDTracker().evaluate_order_flow(klines)
-            eff_hurst = h_score if ok_h else None
-            return eff_hurst, cvd_score
+            return h_score, cvd_score
         except Exception:
             return None, 50.0
 

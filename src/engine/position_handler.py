@@ -73,6 +73,8 @@ class PositionHandler:
         removed = min(removed, pos.amount)
         basis = pos.cost_basis if pos.cost_basis > 0 else pos.entry_price * pos.amount
         sold_basis = basis * removed / pos.amount
+        buy_fee = max(0.0, basis - pos.entry_price * pos.amount) * (removed / pos.amount)
+        total_fee = round(fee_q + buy_fee, 6)
         proceeds = (cost if cost > 0 else res.amount * res.price) - fee_q
         pnl_usd = proceeds - sold_basis
         pnl_pct = pnl_usd / sold_basis * 100 if sold_basis > 0 else 0.0
@@ -80,7 +82,7 @@ class PositionHandler:
 
         trade = {
             "id": res.order_id, "order_id": res.order_id, "symbol": symbol, "entry_price": pos.entry_price,
-            "exit_price": res.price, "amount": res.amount, "cost_basis": sold_basis, "fee_quote": fee_q,
+            "exit_price": res.price, "amount": res.amount, "cost_basis": sold_basis, "fee_quote": total_fee,
             "fee_base": fee_b, "pnl_pct": round(pnl_pct, 4), "pnl_usd": round(pnl_usd, 8),
             "reason": reason, "reason_arabic": PerformanceTracker.translate_reason(reason),
             "duration_mins": round((now - pos.entry_time).total_seconds() / 60, 1),
@@ -88,13 +90,11 @@ class PositionHandler:
             "vector": getattr(pos, "entry_vector", []),
         }
         pos.amount, pos.cost_basis, pos.execution_uncertain = max(0.0, pos.amount - removed), max(0.0, basis - sold_basis), False
-        if "PARTIAL_TP" in reason:
-            pos.partial_tp_done = True
+        if "PARTIAL_TP" in reason: pos.partial_tp_done = True
         if pos.amount <= epsilon:
             del positions[symbol]
-            if exchange and hasattr(exchange, "_cooldown_mgr"):
-                exchange._cooldown_mgr.set_cooldown(symbol, 15.0)
-            if exchange and hasattr(exchange, "_notifier"):
-                exchange._notifier.notify_trade_closed(trade, getattr(exchange, "usdt_balance", 0.0))
+            if exchange:
+                getattr(exchange, "_cooldown_mgr", None) and exchange._cooldown_mgr.set_cooldown(symbol, 15.0)
+                getattr(exchange, "_notifier", None) and exchange._notifier.notify_trade_closed(trade, getattr(exchange, "usdt_balance", 0.0))
         trade_history.append(trade)
         return res_dict(True, "Confirmed exit", res.status, trade=trade, order_id=res.order_id)
