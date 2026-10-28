@@ -55,6 +55,10 @@ class OpportunityExecutor:
         if not cur_p or cur_p <= 0:
             entry.update(approved=False, reason="سعر السوق غير متاح — رفض لمنع استخدام سعر قديم")
             return False
+        c_avg = sum(float(k["close"]) for k in klines[-5:]) / 5.0 if klines else cur_p
+        if cur_p > c_avg * 1.018:
+            entry.update(approved=False, reason="تضخم سعري لحظي — انتظار ارتداد داعم لمنع الشراء بالقمة")
+            return False
         ok_micro, micro_msg = OpportunityFilters.check_microstructure(item.symbol, klines, cur_p, exchange=exchange)
         if not ok_micro:
             entry.update(approved=False, reason=micro_msg)
@@ -62,8 +66,7 @@ class OpportunityExecutor:
         rules = exchange.get_market_rules(item.symbol)
         minimum = max(config.min_notional, rules.get("min_notional", 0))
         th = getattr(exchange, "_trade_history", None) or []
-        s_w = sum(1 for t in th if t.get("symbol") == item.symbol and t.get("pnl_usd", 0) > 0)
-        s_l = sum(1 for t in th if t.get("symbol") == item.symbol and t.get("pnl_usd", 0) < 0)
+        s_w, s_l = sum(1 for t in th if t.get("symbol") == item.symbol and t.get("pnl_usd", 0) > 0), sum(1 for t in th if t.get("symbol") == item.symbol and t.get("pnl_usd", 0) < 0)
         from src.core.kelly_sizer import KellySizer
         k_mult = KellySizer().calculate_alpha_multiplier(res.total_score, s_w, s_l)
         eff_size = min(round(slot_size * k_mult, 2), exchange.get_balance("USDT"))
@@ -75,8 +78,7 @@ class OpportunityExecutor:
         order = exchange.place_market_buy(item.symbol, eff_size, **({"client_order_id": client_id} if client_id else {}))
         if order.success and order.price > 0 and order.amount > 0:
             tp_pct, sl_pct, _ = ATRCalculator().calculate_targets(order.price, klines)
-            target_tp = order.price * (1.0 + tp_pct)
-            stop_loss = order.price * (1.0 - sl_pct)
+            target_tp, stop_loss = order.price * (1.0 + tp_pct), order.price * (1.0 - sl_pct)
             vol = float(klines[-1]["volume"]) if klines else 1.0
             avg_v = max(1e-5, sum(float(k.get("volume", 0.0)) for k in klines[-10:]) / 10.0) if klines else 1.0
             from src.core.vector_memory import VectorMemoryBuffer
@@ -89,10 +91,8 @@ class OpportunityExecutor:
             )
             pos_dict = {"symbol": item.symbol, "entry_price": order.price, "cost_basis": eff_size,
                         "target_tp": target_tp, "stop_loss": stop_loss, "slot_id": slot_id}
-            if journal:
-                journal.log_trade_opened(pos_dict, item.title, res.total_score, phase.value)
-            if hasattr(exchange, "_notifier"):
-                exchange._notifier.notify_trade_opened(pos_dict, item.title, res.total_score)
+            journal and journal.log_trade_opened(pos_dict, item.title, res.total_score, phase.value)
+            getattr(exchange, "_notifier", None) and exchange._notifier.notify_trade_opened(pos_dict, item.title, res.total_score)
         else:
             entry.update(approved=False, reason=order.message or order.status)
         if after_order:

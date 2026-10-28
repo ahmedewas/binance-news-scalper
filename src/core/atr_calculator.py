@@ -40,10 +40,10 @@ class ATRCalculator:
 
         atr_pct = atr / entry_price
 
-        # Fast momentum scalping targets: TP clamped between +0.9% and +2.5%
-        tp_pct = round(min(0.025, max(0.009, atr_pct * self.tp_mult)), 4)
+        # Scalping targets with breathing room: TP clamped between +1.2% and +3.0%
+        tp_pct = round(min(0.030, max(0.012, atr_pct * self.tp_mult)), 4)
 
-        # SL clamped between -0.6% and -1.2%
-        sl_pct = round(min(0.012, max(0.006, atr_pct * self.sl_mult)), 4)
+        # SL clamped between -0.8% and -1.5%
+        sl_pct = round(min(0.015, max(0.008, atr_pct * self.sl_mult)), 4)
 
         return tp_pct, sl_pct, round(atr, 6)

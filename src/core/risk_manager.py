@@ -7,9 +7,9 @@ from src.core.models import Position
 class RiskManager:
     def __init__(
         self,
-        trailing_tp_pct: float = 0.012,
+        trailing_tp_pct: float = 0.015,
         trailing_offset_pct: float = 0.004,
-        stop_loss_pct: float = 0.009,
+        stop_loss_pct: float = 0.015,
         timeout_minutes: int = 20,
         breakeven_trigger_pct: float = 0.006,
         fee_coverage_pct: float = 0.0035,

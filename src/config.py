@@ -16,13 +16,13 @@ class AppConfig:
     initial_paper_balance: float = float(
         os.getenv("INITIAL_PAPER_BALANCE", "500.0")
     )
-    trailing_tp_pct: float = float(os.getenv("TRAILING_TP_PCT", "0.015"))
+    trailing_tp_pct: float = float(os.getenv("TRAILING_TP_PCT", "0.022"))
     trailing_offset_pct: float = float(
-        os.getenv("TRAILING_OFFSET_PCT", "0.004")
+        os.getenv("TRAILING_OFFSET_PCT", "0.005")
     )
-    stop_loss_pct: float = float(os.getenv("STOP_LOSS_PCT", "0.008"))
-    timeout_minutes: int = int(os.getenv("TIMEOUT_MINUTES", "60"))
-    min_score: float = float(os.getenv("MIN_PROBABILITY_SCORE", "78.0"))
+    stop_loss_pct: float = float(os.getenv("STOP_LOSS_PCT", "0.015"))
+    timeout_minutes: int = int(os.getenv("TIMEOUT_MINUTES", "35"))
+    min_score: float = float(os.getenv("MIN_PROBABILITY_SCORE", "72.0"))
     port: int = int(os.getenv("PORT", "8080"))
     host: str = os.getenv("HOST", "127.0.0.1")
     dashboard_token: str = os.getenv("DASHBOARD_TOKEN", "")
