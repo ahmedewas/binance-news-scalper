@@ -2,6 +2,7 @@
 import time
 import math
 import requests
+from dataclasses import asdict
 from typing import List, Dict, Any
 from src.exchange.base import BaseExchange
 from src.core.models import OrderResult
@@ -11,6 +12,7 @@ class PaperExchange(BaseExchange):
     def __init__(self, initial_usdt: float = 15.0):
         self.usdt_balance = float(initial_usdt)
         self.holdings: Dict[str, float] = {}
+        self.orders: Dict[str, dict] = {}
         self.fee_rate = 0.001
         self._price_cache: Dict[str, float] = {}
         self.session = requests.Session()
@@ -48,6 +50,8 @@ class PaperExchange(BaseExchange):
         return {"min_notional": 5.0, "min_amount": 0.0}
 
     def place_market_buy(self, symbol: str, cost_usdt: float, client_order_id=None) -> OrderResult:
+        if client_order_id in self.orders:
+            return self._replay_order(symbol, "BUY", cost_usdt, client_order_id)
         if not math.isfinite(cost_usdt) or cost_usdt <= 0:
             return OrderResult(False, "", symbol, 0, 0, "BUY", "REJECTED", "Invalid quantity")
         if cost_usdt > self.usdt_balance:
@@ -61,10 +65,14 @@ class PaperExchange(BaseExchange):
         base = symbol.split("/")[0] if "/" in symbol else symbol.replace("USDT", "")
         self.holdings[base] = self.holdings.get(base, 0.0) + amount
         order_id = client_order_id or f"paper_buy_{time.time_ns()}"
-        return OrderResult(True, order_id, symbol, price, amount, "BUY", "FILLED", "Simulated Buy",
-                           cost=cost_usdt, fee_base=fee / price, client_order_id=client_order_id or "")
+        result = OrderResult(True, order_id, symbol, price, amount, "BUY", "FILLED", "Simulated Buy",
+                             cost=cost_usdt, fee_base=fee / price, client_order_id=client_order_id or "")
+        self.orders[order_id] = {"quantity": cost_usdt, "result": asdict(result)}
+        return result
 
     def place_market_sell(self, symbol: str, amount: float, client_order_id=None) -> OrderResult:
+        if client_order_id in self.orders:
+            return self._replay_order(symbol, "SELL", amount, client_order_id)
         if not math.isfinite(amount) or amount <= 0:
             return OrderResult(False, "", symbol, 0, 0, "SELL", "REJECTED", "Invalid quantity")
         base = symbol.split("/")[0] if "/" in symbol else symbol.replace("USDT", "")
@@ -79,16 +87,24 @@ class PaperExchange(BaseExchange):
         self.holdings[base] = max(0.0, avail - amount)
         self.usdt_balance += (gross - fee)
         order_id = client_order_id or f"paper_sell_{time.time_ns()}"
-        return OrderResult(True, order_id, symbol, price, amount, "SELL", "FILLED", "Simulated Sell",
-                           cost=gross, fee_quote=fee, client_order_id=client_order_id or "")
+        result = OrderResult(True, order_id, symbol, price, amount, "SELL", "FILLED", "Simulated Sell",
+                             cost=gross, fee_quote=fee, client_order_id=client_order_id or "")
+        self.orders[order_id] = {"quantity": amount, "result": asdict(result)}
+        return result
+
+    def _replay_order(self, symbol, side, quantity, client_order_id):
+        row = self.orders[client_order_id]
+        result = self.reconcile_order(symbol, client_order_id)
+        if result.side != side or row["quantity"] != quantity:
+            return OrderResult(False, client_order_id, symbol, 0, 0, side, "UNKNOWN",
+                               "Client order ID conflicts with recorded execution", client_order_id=client_order_id)
+        return result
 
     def reconcile_order(self, symbol: str, client_order_id: str) -> OrderResult:
-        """Reports order status only; never executes a sell autonomously."""
-        base = symbol.split("/")[0] if "/" in symbol else symbol.replace("USDT", "")
-        avail = self.holdings.get(base, 0.0)
-        price = self._price_cache.get(symbol.replace("/", "").upper(), 0.0)
-        if avail > 0:
-            return OrderResult(True, client_order_id, symbol, price, avail, "BUY", "FILLED",
-                               "Paper order confirmed filled", client_order_id=client_order_id)
-        return OrderResult(True, client_order_id, symbol, 0, 0, "", "REJECTED",
-                           "No holdings for paper reconcile", client_order_id=client_order_id)
+        """Return the recorded execution; balances are never execution evidence."""
+        row = self.orders.get(client_order_id)
+        if row and row["result"]["symbol"] == symbol:
+            return OrderResult(**row["result"])
+        return OrderResult(False, client_order_id, symbol, 0, 0, "", "UNKNOWN",
+                           "No matching paper execution record; manual review required",
+                           client_order_id=client_order_id)

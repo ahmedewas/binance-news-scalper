@@ -46,12 +46,15 @@ class HurstFilter:
         self, prices: List[float]
     ) -> Tuple[bool, float, str]:
         """Filters out chaotic Brownian noise and accepts only persistent trending states."""
+        if len(prices) < 20:
+            return False, 20.0, "Insufficient price history"
         h = self.calculate_hurst(prices)
-        if h >= self.min_hurst:
-            confidence = min(100.0, (h - 0.50) * 200.0 + 50.0)
+        if h >= 0.50:
+            confidence = min(100.0, (h - 0.50) * 150.0 + 50.0)
             return True, round(confidence, 1), f"Persistent Trend (Hurst: {h:.3f} > 0.5)"
 
-        if h <= 0.45:
-            return False, 0.0, f"Chaos Noise Rejected (Anti-persistent Hurst: {h:.3f})"
+        if h >= 0.38:
+            confidence = 35.0 + (h - 0.38) * (14.0 / 0.12)
+            return True, round(confidence, 1), f"Micro Brownian Equilibrium (Hurst: {h:.3f})"
 
-        return False, 20.0, f"Random Walk / Brownian Motion (Hurst: {h:.3f})"
+        return False, round(h * 50.0, 1), f"Chaos Noise Rejected (Anti-persistent Hurst: {h:.3f})"

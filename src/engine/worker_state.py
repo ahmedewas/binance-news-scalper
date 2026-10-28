@@ -24,7 +24,7 @@ class WorkerState:
                      loss_limit_hit=self.loss_limit_hit)
         if self.mode == 'PAPER':
             state['paper'] = dict(usdt_balance=self.exchange.usdt_balance,
-                                  holdings=self.exchange.holdings)
+                                  holdings=self.exchange.holdings, orders=self.exchange.orders)
         try:
             self.store.save(state)
         except Exception:
@@ -63,6 +63,7 @@ class WorkerState:
         if self.mode == 'PAPER':
             self.exchange.usdt_balance = state['paper']['usdt_balance']
             self.exchange.holdings = state['paper']['holdings']
+            self.exchange.orders = state['paper'].get('orders', {})
         self.is_active = bool(state.get('is_active')) and self.mode == 'PAPER'
         if self.pending_orders or self.loss_limit_hit:
             self.is_active = False

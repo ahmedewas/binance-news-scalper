@@ -81,6 +81,7 @@ class WorkerAdminMixin:
                 StateStore(archive).save(self.store.load())
             self.exchange.usdt_balance = config.initial_paper_balance
             self.exchange.holdings = {}
+            self.exchange.orders = {}
             self.cash = config.initial_paper_balance
             self.tracker = PerformanceTracker(self.cash)
             self.trade_history, self.latest_news, self.entry_times, self.candidates = [], [], [], []

@@ -45,11 +45,22 @@ class MarketScanner:
                                     "score": 0, "approved": False, "status": "بيانات غير متاحة"})
                     continue
                 phase, phase_score = self.regime_detector.detect_phase(klines)
-                score_res = self.scoring_engine.evaluate(sym, phase, phase_score, klines, 50.0)
+                from src.engine.opportunity_filters import OpportunityFilters
+                h_sc, cvd_sc = OpportunityFilters.calculate_alpha_metrics(klines)
+                score_res = self.scoring_engine.evaluate(sym, phase, phase_score, klines, 50.0, cvd_score=cvd_sc, hurst_score=h_sc)
+                crit_ok, crit_msg = True, ""
+                crit = getattr(self.exchange, "_meta_critic", None)
+                if crit:
+                    try:
+                        crit_ok, crit_msg = crit.is_symbol_permitted(sym)
+                    except Exception:
+                        crit_ok, crit_msg = True, ""
+                is_app = score_res.is_approved and crit_ok
+                status_label = f"حظر MetaCritic ({crit_msg})" if not crit_ok else ("مؤهل للفحص" if is_app else (score_res.rejection_reason or "أقل من العتبة"))
                 results.append({
                     "symbol": sym, "price": price, "phase": phase.value,
-                    "score": score_res.total_score, "approved": score_res.is_approved,
-                    "status": "مؤهل للفحص" if score_res.is_approved else score_res.rejection_reason,
+                    "score": score_res.total_score, "approved": is_app,
+                    "status": status_label,
                     "pillar": EcosystemRegistry.get_pillar_for_symbol(sym) or "GENERAL",
                     "leader": EcosystemRegistry.get_leader_for_symbol(sym) or sym,
                 })

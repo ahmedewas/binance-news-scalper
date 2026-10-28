@@ -1,5 +1,6 @@
 """Worker Order Operations: Manages exit executions, manual closes and order reconciliations."""
 import uuid
+import math
 from datetime import datetime, timezone
 from src.core.models import Position
 from src.engine.position_handler import PositionHandler
@@ -68,6 +69,15 @@ class WorkerOrderOpsMixin:
                 if order.status == 'UNKNOWN':
                     results.append(dict(id=cid, success=False, message=order.message))
                     continue
+                v_fill = (order.success and order.status == 'FILLED' and order.symbol == intent['symbol'] and
+                          order.side == intent['side'] and bool(order.order_id) and (not order.client_order_id or order.client_order_id == cid) and
+                          all(math.isfinite(v) and v > 0 for v in (order.price, order.amount, order.cost)) and
+                          all(math.isfinite(v) and v >= 0 for v in (order.fee_quote, order.fee_base)))
+                v_rej = (not order.success and order.status == 'REJECTED' and order.amount == 0 and
+                         order.symbol == intent['symbol'] and order.side == intent['side'] and (not order.client_order_id or order.client_order_id == cid))
+                if not (v_fill or v_rej):
+                    results.append(dict(id=cid, success=False, message='نتيجة مطابقة غير صالحة؛ بقي الأمر معلقاً للفحص'))
+                    continue
                 sym = intent['symbol']
                 if order.success and intent['side'] == 'BUY':
                     if sym in self.positions:
@@ -92,6 +102,5 @@ class WorkerOrderOpsMixin:
                 self.pending_orders.pop(cid, None)
                 self.persist()
                 results.append(dict(id=cid, success=True, message='تمت مطابقة حالة الأمر'))
-            self.cash = self.exchange.get_balance('USDT')
-            self._publish()
+            self.cash, _ = self.exchange.get_balance('USDT'), self._publish()
             return {'results': results, 'remaining': len(self.pending_orders), 'is_active': False}

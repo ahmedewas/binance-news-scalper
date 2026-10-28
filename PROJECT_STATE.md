@@ -1,5 +1,15 @@
 # Living Memory & Project State Tracking: Binance News Scalper
 
+## Atomic review remediation — Step 1 of 16 — 2026-10-28
+
+- Scope authorized: fix issue 1 only (fabricated PAPER reconciliation); stop before issue 2.
+- Implemented: paper executions are recorded by order ID with original side, price, amount, cost and fees; reconciliation reads this ledger instead of inferring execution from holdings. Reusing an ID with the same request returns the existing execution; conflicting requests remain UNKNOWN.
+- Persistence: ledger, balance and holdings share the existing atomic worker snapshot. Legacy snapshots without a ledger remain readable, but missing execution evidence stays UNKNOWN. Session reset archives the ledger before clearing it.
+- Validation: settlement rejects inconsistent status/success, wrong symbol/side/client ID, nonpositive execution values and invalid fees before creating a position or removing the pending intent.
+- Verification: 18 added regression cases; fresh isolated full suite **240 passed, 1 existing deprecation warning in 3.48s**. An earlier run after focused tests failed the existing genetic optimizer test due to shared test data; a fresh isolated run passed. Test-data isolation outside these new tests remains a separate concern.
+- Not performed: restart/deployment, LIVE execution, changes to runtime data, automatic repair of legacy corrupted positions, or issue 2 onward. Unknown historical executions require evidence/manual review; no fabricated recovery.
+- Next proposed step: issue 2, process-lock ownership during mode switching; await the user's continuation request.
+
 ## Security & Correctness Hardening (8 Vulnerability Patches) — 2026-10-28 — Verified
 
 1. **Same-Mode Preservation Guard (`src/engine/worker_admin.py`):** Re-selecting the active mode (PAPER or LIVE) preserves running session state, balance, and tracker; never resets state or bypasses LIVE loss circuit. Checks destination state conflicts even on same-mode.
