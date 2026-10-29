@@ -7,7 +7,7 @@ echo ===================================================================
 echo     BINANCE NEWS SCALPER - INSTITUTIONAL QUANT ENGINE
 echo ===================================================================
 echo.
-echo [*] Mode: PAPER TRADING (Real Market Data & Live News)
+echo [*] Mode: PAPER TRADING (Real Market Data ^& Live News)
 echo [*] Portfolio: $15.00 USDT Initial (3 Slots x $5.00)
 echo [*] Strategies: Wyckoff Regime + FVG + CVD + Kelly + Hurst Filter
 echo [*] Dashboard PC: http://localhost:8080

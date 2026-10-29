@@ -11,10 +11,10 @@ class GeneticOptimizer:
         self.state_file = Path(state_file)
         self.generation = 1
         self.population: List[Dict[str, Any]] = [
-            {"tp_pct": 0.010, "sl_pct": 0.006, "timeout_min": 10, "fitness": 0.0, "evals": 0},
-            {"tp_pct": 0.012, "sl_pct": 0.007, "timeout_min": 15, "fitness": 0.0, "evals": 0},
-            {"tp_pct": 0.015, "sl_pct": 0.008, "timeout_min": 20, "fitness": 0.0, "evals": 0},
-            {"tp_pct": 0.018, "sl_pct": 0.009, "timeout_min": 25, "fitness": 0.0, "evals": 0},
+            {"tp_pct": 0.015, "sl_pct": 0.008, "timeout_min": 25, "fitness": 0.0, "evals": 0},
+            {"tp_pct": 0.018, "sl_pct": 0.009, "timeout_min": 30, "fitness": 0.0, "evals": 0},
+            {"tp_pct": 0.022, "sl_pct": 0.010, "timeout_min": 35, "fitness": 0.0, "evals": 0},
+            {"tp_pct": 0.025, "sl_pct": 0.012, "timeout_min": 45, "fitness": 0.0, "evals": 0},
         ]
         while len(self.population) < self.population_size:
             self.population.append(self._mutate(self.population[0].copy()))
@@ -22,9 +22,9 @@ class GeneticOptimizer:
 
     def _mutate(self, chromo: Dict[str, Any]) -> Dict[str, Any]:
         c = chromo.copy()
-        c["tp_pct"] = round(min(0.025, max(0.008, c["tp_pct"] * random.uniform(0.90, 1.10))), 4)
-        c["sl_pct"] = round(min(0.012, max(0.005, c["sl_pct"] * random.uniform(0.90, 1.10))), 4)
-        c["timeout_min"] = int(min(45, max(10, round(c["timeout_min"] * random.uniform(0.85, 1.15)))))
+        c["tp_pct"] = round(min(0.035, max(0.014, c["tp_pct"] * random.uniform(0.90, 1.10))), 4)
+        c["sl_pct"] = round(min(0.012, max(0.007, c["sl_pct"] * random.uniform(0.90, 1.10))), 4)
+        c["timeout_min"] = int(min(60, max(25, round(c["timeout_min"] * random.uniform(0.85, 1.15)))))
         c["fitness"], c["evals"] = 0.0, 0
         return c
 

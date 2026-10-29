@@ -79,7 +79,7 @@ class BotWorker(WorkerSnapshotMixin, WorkerOrderOpsMixin, WorkerCycleMixin, Work
         # Align execution targets: TP, stage1 TP, timeout, and maintain non-lowered SL floor
         self.risk_manager.trailing_tp_pct = self.risk_manager.stage1_tp_pct = fittest["tp_pct"]
         self.risk_manager.timeout_minutes = int(fittest.get("timeout_min", self.risk_manager.timeout_minutes))
-        if fittest["sl_pct"] > self.risk_manager.stop_loss_pct:
+        if fittest.get("sl_pct", 0) > self.risk_manager.stop_loss_pct:
             self.risk_manager.stop_loss_pct = fittest["sl_pct"]
         self.meta_critic.reflect_on_history(self.trade_history)
         self.persist()
